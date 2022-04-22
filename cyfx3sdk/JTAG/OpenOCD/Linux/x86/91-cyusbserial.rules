@@ -1,0 +1,5 @@
+# Cypress USB Serial library wrapper.
+# Rules to make Cypress USB devices writable so that openocd can access them.
+# Cypress USB vendor ID = 0x04b4
+KERNEL=="*", SUBSYSTEM=="usb", ENV{DEVTYPE}=="usb_device", ACTION=="add", ATTR{idVendor}=="04b4", MODE="666", TAG="cyusb_dev"
+KERNEL=="*", SUBSYSTEM=="usb", ENV{DEVTYPE}=="usb_device", ACTION=="remove", TAG=="cyusb_dev"

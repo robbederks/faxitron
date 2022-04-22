@@ -1,0 +1,12 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<GPIFIITimingSimulation version="1">
+  <Clock>200</Clock>
+  <BufferSize>512</BufferSize>
+  <WaterMark>0</WaterMark>
+  <Scenario Name="SCENARIO0" CurrentThread="Thread0">
+    <State StateId="STARTSTATE5" WaitNumber="0" />
+    <State StateId="STATE5" WaitNumber="0" />
+    <State StateId="STATE6" WaitNumber="0" />
+    <State StateId="STATE7" WaitNumber="0" />
+  </Scenario>
+</GPIFIITimingSimulation>

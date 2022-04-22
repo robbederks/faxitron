@@ -1,0 +1,107 @@
+## Copyright Cypress Semiconductor Corporation, 2010-2018,
+## All Rights Reserved
+## UNPUBLISHED, LICENSED SOFTWARE.
+##
+## CONFIDENTIAL AND PROPRIETARY INFORMATION
+## WHICH IS THE PROPERTY OF CYPRESS.
+##
+## Use of this file is governed
+## by the license agreement included in the file
+##
+##      <install>/license/license.txt
+##
+## where <install> is the Cypress software
+## installation root directory path.
+# 
+
+FX3FWROOT=../..
+include $(FX3FWROOT)/fw_build/fx3_fw/fx3_build_config.mak
+
+all:compile
+
+ifeq ($(CYFXEXOPT),i2cregmode)
+    EXSUBDIRS=cyfxusbi2cregmode
+endif
+
+ifeq ($(CYFXEXOPT),i2cdmamode)
+    EXSUBDIRS=cyfxusbi2cdmamode
+endif
+
+ifeq ($(CYFXEXOPT),spiregmode)
+    EXSUBDIRS=cyfxusbspiregmode
+endif
+
+ifeq ($(CYFXEXOPT),spidmamode)
+    EXSUBDIRS=cyfxusbspidmamode
+endif
+
+ifeq ($(CYFXEXOPT),spigpiomode)
+    EXSUBDIRS=cyfxusbspigpiomode
+endif
+
+ifeq ($(CYFXEXOPT),uartregmode)
+    EXSUBDIRS=cyfxuartlpregmode
+endif
+
+ifeq ($(CYFXEXOPT),uartdmamode)
+    EXSUBDIRS=cyfxuartlpdmamode
+endif
+
+ifeq ($(CYFXEXOPT),i2sdmamode)
+    EXSUBDIRS=cyfxusbi2sdmamode
+endif
+
+ifeq ($(CYFXEXOPT),gpioapp)
+    EXSUBDIRS=cyfxgpioapp
+endif
+
+ifeq ($(CYFXEXOPT),gpiocomplexapp)
+    EXSUBDIRS=cyfxgpiocomplexapp
+endif
+
+ifeq ($(CYFXEXOPT),usbuart)
+    EXSUBDIRS=cyfxusbuart
+endif
+
+ifeq ($(CYFXEXOPT),) 
+    EXSUBDIRS= cyfxusbi2cregmode \
+	       cyfxusbi2cdmamode \
+	       cyfxuartlpdmamode \
+	       cyfxuartlpregmode \
+	       cyfxusbspidmamode \
+	       cyfxusbspiregmode \
+	       cyfxusbspigpiomode\
+	       cyfxusbi2sdmamode \
+	       cyfxgpioapp 	 \
+	       cyfxgpiocomplexapp \
+	       cyfxusbuart
+endif
+
+clean: 
+	for subdir in $(EXSUBDIRS); do \
+		$(MAKE) -C $$subdir clean; \
+		done
+
+compile: eclipse_build
+	for subdir in $(EXSUBDIRS); do \
+		$(MAKE) -C $$subdir $@; \
+		done
+
+eclipse_build:
+	for subdir in $(EXSUBDIRS); do \
+		cp -f $(FX3FWROOT)/fw_build/fx3_fw/cyfx_gcc_startup.S $$subdir/. ;\
+		cp -f $(FX3FWROOT)/fw_build/fx3_fw/cyfxtx.c $$subdir/. ;\
+	done
+
+eclipse_clean:
+	for subdir in $(EXSUBDIRS); do \
+		rm -f $$subdir/cyfx_gcc_startup.S ;\
+		rm -f $$subdir/cyfxtx.c ;\
+		rm -f $$subdir/Debug/* ;\
+		rmdir  $$subdir/Debug ;\
+		rm -f $$subdir/Release/* ;\
+		rmdir  $$subdir/Release ;\
+		done
+
+##[]
+
