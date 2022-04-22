@@ -1,4 +1,6 @@
 *.S
 *.o
 *.map
-cyfxtx.c
+*.elf
+e2i
+.sconsign.*

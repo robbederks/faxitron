@@ -1,0 +1,4 @@
+import os
+
+env = Environment(ENV=os.environ)
+elf2img = env.Program('e2i', 'elf2img.c')
