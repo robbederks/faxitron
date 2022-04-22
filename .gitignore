@@ -2,5 +2,6 @@
 *.o
 *.map
 *.elf
+*.img
 e2i
 .sconsign.*
