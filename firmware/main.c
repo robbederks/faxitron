@@ -9,6 +9,9 @@
 #include "cyu3usb.h"
 #include "cyu3tx.h"
 
+// GPIF design
+#include "gpif/faxitron.cydsn/cyfxgpif2config.h"
+
 CyU3PThread applnThread;          /* Application thread structure */
 CyU3PDmaChannel glChHandleBulkLp; /* DMA Channel handle */
 bool glIsApplnActive = false;     /* Whether the application is active or not. */
@@ -29,7 +32,6 @@ void CyFxApplnStart(void) {
   /* First identify the usb speed. Once that is identified,
    * create a DMA channel and start the transfer on this. */
 
-  /* Based on the Bus Speed configure the endpoint packet size */
   switch (usbSpeed) {
     case CY_U3P_FULL_SPEED:
       size = 64;
@@ -56,20 +58,13 @@ void CyFxApplnStart(void) {
   epCfg.pcktSize = size;
 
   /* Consumer endpoint configuration */
-  apiRetStatus = CyU3PSetEpConfig(CY_FX_EP_DEBUG, &epCfg);
-  if (apiRetStatus != CY_U3P_SUCCESS) {
-    CyFxAppErrorHandler(apiRetStatus);
-  }
+  CHECK_API_RET(CyU3PSetEpConfig(CY_FX_EP_DEBUG, &epCfg));
 
   /* Flush the Endpoint memory */
   CyU3PUsbFlushEp(CY_FX_EP_DEBUG);
 
-  apiRetStatus = CyU3PDebugInit(CY_FX_EP_DEBUG_SOCKET, 8);
-  if (apiRetStatus != CY_U3P_SUCCESS) {
-    CyFxAppErrorHandler(apiRetStatus);
-  }
+  CHECK_API_RET(CyU3PDebugInit(CY_FX_EP_DEBUG_SOCKET, 8));
 
-  /* Update the status flag. */
   glIsApplnActive = true;
 }
 
@@ -95,10 +90,7 @@ void CyFxApplnStop(
   epCfg.enable = false;
 
   /* Consumer endpoint configuration. */
-  apiRetStatus = CyU3PSetEpConfig(CY_FX_EP_DEBUG, &epCfg);
-  if (apiRetStatus != CY_U3P_SUCCESS) {
-    CyFxAppErrorHandler(apiRetStatus);
-  }
+  CHECK_API_RET(CyU3PSetEpConfig(CY_FX_EP_DEBUG, &epCfg));
 }
 
 /* Callback to handle the USB setup requests. */
@@ -195,152 +187,57 @@ void CyFxApplnUSBEventCB(CyU3PUsbEventType_t evtype, uint16_t evdata) {
   }
 }
 
-/* Callback function to handle LPM requests from the USB 3.0 host. This function is invoked by the API
-   whenever a state change from U0 -> U1 or U0 -> U2 happens. If we return true from this function, the
-   FX3 device is retained in the low power state. If we return false, the FX3 device immediately tries
-   to trigger an exit back to U0.
-
-   This application does not have any state in which we should not allow U1/U2 transitions; and therefore
-   the function always return true.
- */
+// Return true to always allow LPM transitions
 CyBool_t CyFxApplnLPMRqtCB(CyU3PUsbLinkPowerMode link_mode) {
   return true;
 }
 
-/* This function initializes the USB Module, sets the enumeration descriptors.
- * This function does not start the logger and this is done only when
- * SET_CONF event is received. */
+// Init usb descriptors when SET_CONF is received
 void CyFxApplnInit(void) {
   CyU3PReturnStatus_t apiRetStatus = CY_U3P_SUCCESS;
 
   /* Start the USB functionality. */
-  apiRetStatus = CyU3PUsbStart();
-  if (apiRetStatus != CY_U3P_SUCCESS) {
-    CyFxAppErrorHandler(apiRetStatus);
-  }
+  CHECK_API_RET(CyU3PUsbStart());
 
-  /* The fast enumeration is the easiest way to setup a USB connection,
-   * where all enumeration phase is handled by the library. Only the
-   * class / vendor requests need to be handled by the application. */
   CyU3PUsbRegisterSetupCallback(CyFxApplnUSBSetupCB, true);
-
-  /* Setup the callback to handle the USB events. */
   CyU3PUsbRegisterEventCallback(CyFxApplnUSBEventCB);
-
-  /* Register a callback to handle LPM requests from the USB 3.0 host. */
   CyU3PUsbRegisterLPMRequestCallback(CyFxApplnLPMRqtCB);
 
   /* Set the USB Enumeration descriptors */
-
-  /* Super speed device descriptor. */
-  apiRetStatus = CyU3PUsbSetDesc(CY_U3P_USB_SET_SS_DEVICE_DESCR, 0, (uint8_t *)CyFxUSB30DeviceDscr);
-  if (apiRetStatus != CY_U3P_SUCCESS) {
-    CyFxAppErrorHandler(apiRetStatus);
-  }
-
-  /* High speed device descriptor. */
-  apiRetStatus = CyU3PUsbSetDesc(CY_U3P_USB_SET_HS_DEVICE_DESCR, 0, (uint8_t *)CyFxUSB20DeviceDscr);
-  if (apiRetStatus != CY_U3P_SUCCESS) {
-    CyFxAppErrorHandler(apiRetStatus);
-  }
-
-  /* BOS descriptor */
-  apiRetStatus = CyU3PUsbSetDesc(CY_U3P_USB_SET_SS_BOS_DESCR, 0, (uint8_t *)CyFxUSBBOSDscr);
-  if (apiRetStatus != CY_U3P_SUCCESS) {
-    CyFxAppErrorHandler(apiRetStatus);
-  }
-
-  /* Device qualifier descriptor */
-  apiRetStatus = CyU3PUsbSetDesc(CY_U3P_USB_SET_DEVQUAL_DESCR, 0, (uint8_t *)CyFxUSBDeviceQualDscr);
-  if (apiRetStatus != CY_U3P_SUCCESS) {
-    CyFxAppErrorHandler(apiRetStatus);
-  }
-
-  /* Super speed configuration descriptor */
-  apiRetStatus = CyU3PUsbSetDesc(CY_U3P_USB_SET_SS_CONFIG_DESCR, 0, (uint8_t *)CyFxUSBSSConfigDscr);
-  if (apiRetStatus != CY_U3P_SUCCESS) {
-    CyFxAppErrorHandler(apiRetStatus);
-  }
-
-  /* High speed configuration descriptor */
-  apiRetStatus = CyU3PUsbSetDesc(CY_U3P_USB_SET_HS_CONFIG_DESCR, 0, (uint8_t *)CyFxUSBHSConfigDscr);
-  if (apiRetStatus != CY_U3P_SUCCESS) {
-    CyFxAppErrorHandler(apiRetStatus);
-  }
-
-  /* Full speed configuration descriptor */
-  apiRetStatus = CyU3PUsbSetDesc(CY_U3P_USB_SET_FS_CONFIG_DESCR, 0, (uint8_t *)CyFxUSBFSConfigDscr);
-  if (apiRetStatus != CY_U3P_SUCCESS) {
-    CyFxAppErrorHandler(apiRetStatus);
-  }
-
-  /* String descriptor 0 */
-  apiRetStatus = CyU3PUsbSetDesc(CY_U3P_USB_SET_STRING_DESCR, 0, (uint8_t *)CyFxUSBStringLangIDDscr);
-  if (apiRetStatus != CY_U3P_SUCCESS) {
-    CyFxAppErrorHandler(apiRetStatus);
-  }
-
-  /* String descriptor 1 */
-  apiRetStatus = CyU3PUsbSetDesc(CY_U3P_USB_SET_STRING_DESCR, 1, (uint8_t *)CyFxUSBManufactureDscr);
-  if (apiRetStatus != CY_U3P_SUCCESS) {
-    CyFxAppErrorHandler(apiRetStatus);
-  }
-
-  /* String descriptor 2 */
-  apiRetStatus = CyU3PUsbSetDesc(CY_U3P_USB_SET_STRING_DESCR, 2, (uint8_t *)CyFxUSBProductDscr);
-  if (apiRetStatus != CY_U3P_SUCCESS) {
-    CyFxAppErrorHandler(apiRetStatus);
-  }
-
-  /* Connect the USB Pins with super speed operation enabled. */
-  apiRetStatus = CyU3PConnectState(true, true);
-  if (apiRetStatus != CY_U3P_SUCCESS) {
-    CyFxAppErrorHandler(apiRetStatus);
-  }
+  CHECK_API_RET(CyU3PUsbSetDesc(CY_U3P_USB_SET_SS_DEVICE_DESCR, 0, (uint8_t *)CyFxUSB30DeviceDscr));
+  CHECK_API_RET(CyU3PUsbSetDesc(CY_U3P_USB_SET_HS_DEVICE_DESCR, 0, (uint8_t *)CyFxUSB20DeviceDscr));
+  CHECK_API_RET(CyU3PUsbSetDesc(CY_U3P_USB_SET_SS_BOS_DESCR, 0, (uint8_t *)CyFxUSBBOSDscr));
+  CHECK_API_RET(CyU3PUsbSetDesc(CY_U3P_USB_SET_DEVQUAL_DESCR, 0, (uint8_t *)CyFxUSBDeviceQualDscr));
+  CHECK_API_RET(CyU3PUsbSetDesc(CY_U3P_USB_SET_SS_CONFIG_DESCR, 0, (uint8_t *)CyFxUSBSSConfigDscr));
+  CHECK_API_RET(CyU3PUsbSetDesc(CY_U3P_USB_SET_HS_CONFIG_DESCR, 0, (uint8_t *)CyFxUSBHSConfigDscr));
+  CHECK_API_RET(CyU3PUsbSetDesc(CY_U3P_USB_SET_FS_CONFIG_DESCR, 0, (uint8_t *)CyFxUSBFSConfigDscr));
+  CHECK_API_RET(CyU3PUsbSetDesc(CY_U3P_USB_SET_STRING_DESCR, 0, (uint8_t *)CyFxUSBStringLangIDDscr));
+  CHECK_API_RET(CyU3PUsbSetDesc(CY_U3P_USB_SET_STRING_DESCR, 1, (uint8_t *)CyFxUSBManufactureDscr));
+  CHECK_API_RET(CyU3PUsbSetDesc(CY_U3P_USB_SET_STRING_DESCR, 2, (uint8_t *)CyFxUSBProductDscr));
+  CHECK_API_RET(CyU3PConnectState(true, true));
 }
 
-/* Entry function for the AppThread. */
 void ApplnThread_Entry(uint32_t input) {
-  uint8_t logPriority;
-  uint16_t logId;
-  uint32_t logParam;
-
-  /* Initialize the logger application */
   CyFxApplnInit();
-
-  logPriority = 1;
-  logId = 0x1111;
-  logParam = 0x12345678;
 
   for (;;) {
     if (glIsApplnActive) {
-      CyU3PDebugLog(logPriority, logId, logParam);
-      logParam += 0x10000000;
-      if (logParam == 0x12345678) {
-        logId += 0x1000;
-        if (logId == 0x1111) {
-          logPriority++;
-          if (logPriority == 5) {
-            logPriority = 1;
-            CyU3PDebugPrint(2, "USB Debug logger: time from start in ticks: %d\n", CyU3PGetTime());
-          }
-        }
-      }
+      CyU3PDebugPrint(5, "Ping! Time in ticks: %d\n", CyU3PGetTime());
     }
 
-    CyU3PThreadSleep(100);
+    CyU3PThreadSleep(1000);
   }
 }
 
-/* Application define function which creates the threads. */
+// Start threads here
 void CyFxApplicationDefine() {
   void *ptr = NULL;
   uint32_t retThrdCreate = CY_U3P_SUCCESS;
 
-  /* Allocate the memory for the threads */
+  // Allocate memory
   ptr = CyU3PMemAlloc(CY_FX_APPLN_THREAD_STACK);
 
-  /* Create the thread for the application */
+  // Create threads
   retThrdCreate = CyU3PThreadCreate(&applnThread,                /* App Thread structure */
                                     "21:USB_DEBUG",              /* Thread ID and Thread name */
                                     ApplnThread_Entry,           /* App Thread Entry function */
@@ -353,15 +250,8 @@ void CyFxApplicationDefine() {
                                     CYU3P_AUTO_START             /* Start the Thread immediately */
   );
 
-  /* Check the return code */
   if (retThrdCreate != 0) {
-    /* Thread Creation failed with the error code retThrdCreate */
-
-    /* Add custom recovery or debug actions here */
-
-    /* Application cannot continue */
-    while (1) {
-    }
+    while (1) {}
   }
 }
 

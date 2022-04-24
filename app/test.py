@@ -1,8 +1,6 @@
 #!/usr/bin/env python3
 
-from distutils import log
 import os
-from requests import head
 import usb1
 import time
 import struct
@@ -12,7 +10,7 @@ dir = os.path.dirname(os.path.realpath(__file__))
 FW_PATH = f"{dir}/../firmware/faxitron.img"
 
 class Faxitron:
-  DEBUG_EP = 0x81
+  DEBUG_EP = 0xA
 
   def __init__(self):
     self.ctx = usb1.USBContext()
@@ -52,14 +50,14 @@ class Faxitron:
       return None
 
     while len(dat) > 0:
-      priority, id, param = struct.unpack('<BxHI', dat[:8])
+      priority, thread, id, param = struct.unpack('<BBHI', dat[:8])
       dat = dat[8:]
       if id <= 0xFFEE:
-        print(f"Structured: Priority: {priority} Id: {hex(id)} Param: {hex(param)}")
+        print(f"Structured: Priority: {priority} Thread: {thread} Id: {hex(id)} Param: {hex(param)}")
       else:
         log_str = dat[:param].decode('utf-8', errors='ignore')
         dat = dat[param:]
-        print(f"Debug: Priority: {priority} Id: {hex(id)} Log: {log_str}")
+        print(f"Debug: Priority: {priority} Thread: {thread} Id: {hex(id)} Log: {log_str}")
 
 if __name__ == '__main__':
   f = Faxitron()

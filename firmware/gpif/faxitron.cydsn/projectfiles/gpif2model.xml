@@ -1,0 +1,162 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<GPIFIIModel version="3">
+  <InterfaceDefination>
+    <InterfaceSetting>
+      <I2SEnabled>False</I2SEnabled>
+      <I2CEnabled>False</I2CEnabled>
+      <SPIEnabled>False</SPIEnabled>
+      <I2SEnabled>False</I2SEnabled>
+      <ADMuxedEnabled>False</ADMuxedEnabled>
+      <InterfaceType>Master</InterfaceType>
+      <CommunicationType>Synchronous</CommunicationType>
+      <ClockSource>Internal</ClockSource>
+      <ClockEdge>Positive</ClockEdge>
+      <Endianness>LittleEndian</Endianness>
+      <DataBusWidth>Bit16</DataBusWidth>
+      <AddressBuswidth>0</AddressBuswidth>
+    </InterfaceSetting>
+  </InterfaceDefination>
+  <Signals>
+    <Signal ElementId="OUTPUT0" SignalType="Output" SpecialFunction="None">
+      <DisplayName>RXEN</DisplayName>
+      <GPIOPinNumber>GPIO_17</GPIOPinNumber>
+      <IntialValue>High</IntialValue>
+      <Polarity>ActiveLow</Polarity>
+      <Delay>Alpha</Delay>
+      <AssetionType>Toggle</AssetionType>
+    </Signal>
+    <Signal ElementId="OUTPUT1" SignalType="Output" SpecialFunction="None">
+      <DisplayName>TXEN</DisplayName>
+      <GPIOPinNumber>GPIO_18</GPIOPinNumber>
+      <IntialValue>High</IntialValue>
+      <Polarity>ActiveLow</Polarity>
+      <Delay>Alpha</Delay>
+      <AssetionType>Toggle</AssetionType>
+    </Signal>
+    <Signal ElementId="OUTPUT2" SignalType="Output" SpecialFunction="None">
+      <DisplayName>TXSCD</DisplayName>
+      <GPIOPinNumber>GPIO_19</GPIOPinNumber>
+      <IntialValue>Low</IntialValue>
+      <Polarity>ActiveHigh</Polarity>
+      <Delay>Alpha</Delay>
+      <AssetionType>Assert</AssetionType>
+    </Signal>
+    <Signal ElementId="INPUT4" SignalType="Input" SpecialFunction="None">
+      <DisplayName>TXHALF</DisplayName>
+      <GPIOPinNumber>GPIO_24</GPIOPinNumber>
+      <Polarity>ActiveHigh</Polarity>
+    </Signal>
+    <Signal ElementId="INPUT3" SignalType="Input" SpecialFunction="None">
+      <DisplayName>TXEMPTY</DisplayName>
+      <GPIOPinNumber>GPIO_23</GPIOPinNumber>
+      <Polarity>ActiveHigh</Polarity>
+    </Signal>
+    <Signal ElementId="INPUT2" SignalType="Input" SpecialFunction="None">
+      <DisplayName>RXFULL</DisplayName>
+      <GPIOPinNumber>GPIO_22</GPIOPinNumber>
+      <Polarity>ActiveHigh</Polarity>
+    </Signal>
+    <Signal ElementId="INPUT1" SignalType="Input" SpecialFunction="None">
+      <DisplayName>RXHALF</DisplayName>
+      <GPIOPinNumber>GPIO_21</GPIOPinNumber>
+      <Polarity>ActiveHigh</Polarity>
+    </Signal>
+    <Signal ElementId="INPUT0" SignalType="Input" SpecialFunction="None">
+      <DisplayName>RXEMPTY</DisplayName>
+      <GPIOPinNumber>GPIO_20</GPIOPinNumber>
+      <Polarity>ActiveHigh</Polarity>
+    </Signal>
+    <Signal ElementId="INPUT5" SignalType="Input" SpecialFunction="None">
+      <DisplayName>TXFULL</DisplayName>
+      <GPIOPinNumber>GPIO_25</GPIOPinNumber>
+      <Polarity>ActiveHigh</Polarity>
+    </Signal>
+  </Signals>
+  <StateMachine>
+    <AddressCounter />
+    <DataCounter />
+    <ControlCounter />
+    <AddressComparator />
+    <DataComparator />
+    <ControlComparator />
+    <DRQ />
+    <AddrData />
+    <State ElementId="STARTSTATE0" StateType="StartState">
+      <DisplayName>START</DisplayName>
+      <RepeatUntillNextTransition>True</RepeatUntillNextTransition>
+      <RepeatCount>0</RepeatCount>
+    </State>
+    <State ElementId="STATE0" StateType="NormalState">
+      <DisplayName>IDLE</DisplayName>
+      <RepeatUntillNextTransition>True</RepeatUntillNextTransition>
+      <RepeatCount>0</RepeatCount>
+    </State>
+    <Transition ElementId="TRANSITION0" SourceState="STARTSTATE0" DestinationState="STATE0" Equation="LOGIC_ONE" />
+    <State ElementId="STATE1" StateType="NormalState">
+      <DisplayName>RX_BEGIN</DisplayName>
+      <RepeatUntillNextTransition>False</RepeatUntillNextTransition>
+      <RepeatCount>0</RepeatCount>
+      <Action ElementId="DR_GPIO0" ActionType="DR_GPIO">
+        <ControlPinName>RXEN</ControlPinName>
+      </Action>
+      <Action ElementId="IN_DATA0" ActionType="IN_DATA">
+        <DataSourceSink>Socket</DataSourceSink>
+        <ThreadNumber>Thread0</ThreadNumber>
+        <SampleData>True</SampleData>
+        <WriteDataIntoDataSink>False</WriteDataIntoDataSink>
+      </Action>
+    </State>
+    <Transition ElementId="TRANSITION1" SourceState="STATE0" DestinationState="STATE1" Equation="!RXEMPTY &amp; DMA_RDY_TH0" />
+    <State ElementId="STATE2" StateType="NormalState">
+      <DisplayName>RX_READ</DisplayName>
+      <RepeatUntillNextTransition>False</RepeatUntillNextTransition>
+      <RepeatCount>0</RepeatCount>
+      <Action ElementId="DR_GPIO0" ActionType="DR_GPIO">
+        <ControlPinName>RXEN</ControlPinName>
+      </Action>
+      <Action ElementId="IN_DATA0" ActionType="IN_DATA">
+        <DataSourceSink>Socket</DataSourceSink>
+        <ThreadNumber>Thread0</ThreadNumber>
+        <SampleData>True</SampleData>
+        <WriteDataIntoDataSink>True</WriteDataIntoDataSink>
+      </Action>
+    </State>
+    <Transition ElementId="TRANSITION2" SourceState="STATE1" DestinationState="STATE2" Equation="LOGIC_ONE" />
+    <Transition ElementId="TRANSITION3" SourceState="STATE2" DestinationState="STATE0" Equation="LOGIC_ONE" />
+    <State ElementId="STATE3" StateType="NormalState">
+      <DisplayName>TX_BEGIN</DisplayName>
+      <RepeatUntillNextTransition>False</RepeatUntillNextTransition>
+      <RepeatCount>0</RepeatCount>
+      <Action ElementId="DR_GPIO0" ActionType="DR_GPIO">
+        <ControlPinName>TXEN</ControlPinName>
+      </Action>
+      <Action ElementId="DR_DATA0" ActionType="DR_DATA">
+        <IsDataCounterConnected>False</IsDataCounterConnected>
+        <DataSourceSink>Socket</DataSourceSink>
+        <ThreadNumber>Thread1</ThreadNumber>
+        <SyncBurstMode>Enable</SyncBurstMode>
+        <DriveNewData>DriveNewData</DriveNewData>
+        <UpdateSource>True</UpdateSource>
+      </Action>
+    </State>
+    <Transition ElementId="TRANSITION4" SourceState="STATE0" DestinationState="STATE3" Equation="DMA_RDY_CT &amp; !TXFULL" />
+    <State ElementId="STATE4" StateType="NormalState">
+      <DisplayName>TX_WRITE</DisplayName>
+      <RepeatUntillNextTransition>False</RepeatUntillNextTransition>
+      <RepeatCount>0</RepeatCount>
+      <Action ElementId="DR_DATA0" ActionType="DR_DATA">
+        <IsDataCounterConnected>False</IsDataCounterConnected>
+        <DataSourceSink>Socket</DataSourceSink>
+        <ThreadNumber>Thread1</ThreadNumber>
+        <SyncBurstMode>Enable</SyncBurstMode>
+        <DriveNewData>DrivePreviousSetData</DriveNewData>
+        <UpdateSource>True</UpdateSource>
+      </Action>
+      <Action ElementId="DR_GPIO0" ActionType="DR_GPIO">
+        <ControlPinName>TXEN</ControlPinName>
+      </Action>
+    </State>
+    <Transition ElementId="TRANSITION5" SourceState="STATE3" DestinationState="STATE4" Equation="LOGIC_ONE" />
+    <Transition ElementId="TRANSITION6" SourceState="STATE4" DestinationState="STATE0" Equation="LOGIC_ONE" />
+  </StateMachine>
+</GPIFIIModel>
