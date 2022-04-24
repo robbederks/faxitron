@@ -7,6 +7,7 @@
 #include "cyu3os.h"
 #include "cyu3system.h"
 #include "cyu3usb.h"
+#include "cyu3tx.h"
 
 CyU3PThread applnThread;          /* Application thread structure */
 CyU3PDmaChannel glChHandleBulkLp; /* DMA Channel handle */
