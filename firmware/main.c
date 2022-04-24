@@ -1,7 +1,7 @@
 
 #include <stdbool.h>
 
-#include "cyfxusbdebug.h"
+#include "main.h"
 #include "cyu3dma.h"
 #include "cyu3error.h"
 #include "cyu3os.h"
@@ -13,10 +13,7 @@ CyU3PDmaChannel glChHandleBulkLp; /* DMA Channel handle */
 bool glIsApplnActive = false;     /* Whether the application is active or not. */
 
 void CyFxAppErrorHandler(CyU3PReturnStatus_t apiRetStatus) {
-  // Infinite loop
-  while (true) {
-    CyU3PThreadSleep(100);
-  }
+  while (true) {}
 }
 
 /* This function starts the logger application. This is called

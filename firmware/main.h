@@ -1,26 +1,3 @@
-/*
- ## Cypress USB 3.0 Platform header file (cyfxusbdebug.h)
- ## ===========================
- ##
- ##  Copyright Cypress Semiconductor Corporation, 2010-2018,
- ##  All Rights Reserved
- ##  UNPUBLISHED, LICENSED SOFTWARE.
- ##
- ##  CONFIDENTIAL AND PROPRIETARY INFORMATION
- ##  WHICH IS THE PROPERTY OF CYPRESS.
- ##
- ##  Use of this file is governed
- ##  by the license agreement included in the file
- ##
- ##     <install>/license/license.txt
- ##
- ##  where <install> is the Cypress software
- ##  installation root directory path.
- ##
- ## ===========================
-*/
-
-/* This file contains the externants used by the debug application example */
 
 #ifndef _INCLUDED_CYFXUSBDEBUG_H_
 #define _INCLUDED_CYFXUSBDEBUG_H_
@@ -44,7 +21,6 @@
          i.e. EP 1 is mapped to UIB socket 1 and EP 2 to socket 2 so on */
 
 #define CY_FX_EP_DEBUG                  0x81    /* EP 1 IN */
-
 #define CY_FX_EP_DEBUG_SOCKET           CY_U3P_UIB_SOCKET_CONS_1    /* Socket 1 is consumer */
 
 /* Extern definitions for the USB Descriptors */
@@ -61,6 +37,4 @@ extern const uint8_t CyFxUSBProductDscr[];
 
 #include "cyu3externcend.h"
 
-#endif /* _INCLUDED_CYFXUSBDEBUG_H_ */
-
-/*[]*/
+#endif
