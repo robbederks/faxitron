@@ -11,6 +11,8 @@ FW_PATH = f"{dir}/../firmware/faxitron.img"
 
 class Faxitron:
   DEBUG_EP = 0xA
+  DATA_IN_EP = 0x1
+  DATA_OUT_EP = 0x1
 
   def __init__(self):
     self.ctx = usb1.USBContext()
@@ -45,7 +47,7 @@ class Faxitron:
 
   def read_logs(self):
     try:
-      dat = self.handle.interruptRead(Faxitron.DEBUG_EP, 256, timeout=100)
+      dat = self.handle.interruptRead(Faxitron.DEBUG_EP, 256, timeout=1)
     except usb1.USBErrorTimeout:
       return None
 
@@ -59,7 +61,37 @@ class Faxitron:
         dat = dat[param:]
         print(f"Debug: Priority: {priority} Thread: {thread} Id: {hex(id)} Log: {log_str}")
 
+  def read_data(self):
+    try:
+      return self.handle.bulkRead(Faxitron.DATA_IN_EP, 256, timeout=100)
+    except usb1.USBErrorTimeout:
+      return None
+
+  def write_data(self, dat):
+    assert len(dat) <= 256, "TODO: loop over data"
+    return self.handle.bulkWrite(Faxitron.DATA_OUT_EP, dat, timeout=100)
+
 if __name__ == '__main__':
   f = Faxitron()
+
+  time.sleep(0.2)
+
+  i=0
   while 1:
     f.read_logs()
+
+    # try:
+    #   dat = f.read_data()
+    #   print('read', dat)
+    # except Exception as e:
+    #   print('re', e)
+
+    try:
+      f.write_data(b"A"*256)
+      i += 1
+      if i%1000 == 0:
+        print(i)
+    except Exception as e:
+      print('we', e)
+    #time.sleep(0.01)
+

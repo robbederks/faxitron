@@ -68,7 +68,7 @@ void CyFxApplnStart(void) {
   CHECK_API_RET(CyU3PSetEpConfig(CY_FX_EP_CONSUMER, &epCfg));
 
   // DMA channels
-  dmaCfg.size = DMA_OUT_BUF_SIZE;
+  dmaCfg.size = DMA_BUF_SIZE;
   dmaCfg.count = CY_FX_DMA_BUF_COUNT_U_2_P;
   dmaCfg.dmaMode = CY_U3P_DMA_MODE_BYTE;
   dmaCfg.notification = 0;
@@ -80,7 +80,7 @@ void CyFxApplnStart(void) {
 
   // Setup
   dmaCfg.prodSckId = CY_U3P_UIB_SOCKET_PROD_1;
-  dmaCfg.consSckId = CY_U3P_PIB_SOCKET_3;
+  dmaCfg.consSckId = CY_U3P_PIB_SOCKET_1;
   CHECK_API_RET(CyU3PDmaChannelCreate(&glChHandleUtoP, CY_U3P_DMA_TYPE_AUTO, &dmaCfg));
 
   dmaCfg.prodSckId = CY_U3P_PIB_SOCKET_0;
@@ -131,18 +131,14 @@ void CyFxApplnStop(
   CHECK_API_RET(CyU3PSetEpConfig(CY_FX_EP_CONSUMER, &epCfg));
 }
 
-/* Callback to handle the USB setup requests. */
+// Callback to handle the USB setup requests.
 CyBool_t CyFxApplnUSBSetupCB(uint32_t setupdat0, uint32_t setupdat1) {
-  /* Fast enumeration is used. Only requests addressed to the interface, class,
-   * vendor and unknown control requests are received by this function.
-   * This application does not support any class or vendor requests. */
-
   uint8_t bRequest, bReqType;
   uint8_t bType, bTarget;
   uint16_t wValue, wIndex;
   CyBool_t isHandled = false;
 
-  /* Decode the fields from the setup request. */
+  // Decode the fields from the setup request
   bReqType = (setupdat0 & CY_U3P_USB_REQUEST_TYPE_MASK);
   bType = (bReqType & CY_U3P_USB_TYPE_MASK);
   bTarget = (bReqType & CY_U3P_USB_TARGET_MASK);
@@ -175,12 +171,40 @@ CyBool_t CyFxApplnUSBSetupCB(uint32_t setupdat0, uint32_t setupdat1) {
      * CyU3PUsbStall (ep, false, true) and return true. Here we are clearing
      * the stall. */
     if ((bTarget == CY_U3P_USB_TARGET_ENDPT) && (bRequest == CY_U3P_USB_SC_CLEAR_FEATURE) && (wValue == CY_U3P_USBX_FS_EP_HALT)) {
-      if ((wIndex == CY_FX_EP_DEBUG) && (glIsApplnActive)) {
-        CyFxApplnStop();
-        CyFxApplnStart();
-        CyU3PUsbStall(wIndex, false, true);
+      if (glIsApplnActive) {
+        if (wIndex == CY_FX_EP_DEBUG) {
+          // TODO: do we want this?
+          CyFxApplnStop();
+          CyFxApplnStart();
 
-        CyU3PUsbAckSetup();
+          CyU3PUsbAckSetup();
+        }
+
+        if (wIndex == CY_FX_EP_PRODUCER) {
+          CyU3PUsbSetEpNak(CY_FX_EP_PRODUCER, true);
+          CyFx3BusyWait(125);
+
+          CyU3PDmaChannelReset(&glChHandleUtoP);
+          CyU3PUsbFlushEp(CY_FX_EP_PRODUCER);
+          CyU3PUsbResetEp(CY_FX_EP_PRODUCER);
+          CyU3PDmaChannelSetXfer(&glChHandleUtoP, CY_FX_DMA_TX_SIZE);
+
+          CyU3PUsbSetEpNak(CY_FX_EP_PRODUCER, false);
+        }
+
+        if (wIndex == CY_FX_EP_CONSUMER) {
+          CyU3PUsbSetEpNak(CY_FX_EP_CONSUMER, true);
+          CyFx3BusyWait(125);
+
+          CyU3PDmaChannelReset(&glChHandlePtoU);
+          CyU3PUsbFlushEp(CY_FX_EP_CONSUMER);
+          CyU3PUsbResetEp(CY_FX_EP_CONSUMER);
+          CyU3PDmaChannelSetXfer(&glChHandlePtoU, CY_FX_DMA_RX_SIZE);
+
+          CyU3PUsbSetEpNak(CY_FX_EP_CONSUMER, false);
+        }
+
+        CyU3PUsbStall(wIndex, false, true);
         isHandled = true;
       }
     }
@@ -188,6 +212,7 @@ CyBool_t CyFxApplnUSBSetupCB(uint32_t setupdat0, uint32_t setupdat1) {
 
   if (bType == CY_U3P_USB_VENDOR_RQT) {
     if (bRequest == 0xE0) {
+      // Device reset
       isHandled = true;
       CyU3PUsbAckSetup();
       CyU3PThreadSleep(100);
@@ -202,19 +227,21 @@ CyBool_t CyFxApplnUSBSetupCB(uint32_t setupdat0, uint32_t setupdat1) {
 void CyFxApplnUSBEventCB(CyU3PUsbEventType_t evtype, uint16_t evdata) {
   switch (evtype) {
     case CY_U3P_USB_EVENT_SETCONF:
-      /* Disable the low power entry to optimize USB throughput */
-      CyU3PUsbLPMDisable();
-      /* Stop the application before re-starting. */
+      // Stop the application before re-starting
       if (glIsApplnActive) {
         CyFxApplnStop();
       }
-      /* Start the logger function. */
+
+      // Disable the low power entry to optimize USB throughput
+      CyU3PUsbLPMDisable();
+
+      // Start app
       CyFxApplnStart();
       break;
 
     case CY_U3P_USB_EVENT_RESET:
     case CY_U3P_USB_EVENT_DISCONNECT:
-      /* Stop the logger function. */
+      // Stop app
       if (glIsApplnActive) {
         CyFxApplnStop();
       }
@@ -274,17 +301,21 @@ void CyFxApplnInit(void) {
   // Init P-port (GPIF)
   pibClock.clkDiv = 8;
   pibClock.clkSrc = CY_U3P_SYS_CLK;
-  pibClock.isHalfDiv = CyFalse;
-  pibClock.isDllEnable = CyTrue;
-  CHECK_API_RET(CyU3PPibInit(CyTrue, &pibClock));
+  pibClock.isHalfDiv = false;
+  pibClock.isDllEnable = true;
+  CHECK_API_RET(CyU3PPibInit(true, &pibClock));
 
   CyU3PPibClockPhase_t core_phase = CYU3P_PIB_CLK_PHASE_01;   /**< Clock phase 1. Lags phase 0 by 22.5 degrees. */
   CyU3PPibClockPhase_t sync_phase = CYU3P_PIB_CLK_PHASE_00;   /**< Clock phase 0. No delay from master clock. */
   CyU3PPibClockPhase_t output_phase = CYU3P_PIB_CLK_PHASE_11; /**< Clock phase 11. Lags phase 0 by 247.5 degrees. */
   uint16_t slave_delay = 0;
-  CHECK_API_RET(CyU3PPibDllConfigure(CYU3P_PIB_DLL_MASTER, slave_delay, core_phase, sync_phase, output_phase, CyTrue));
+  CHECK_API_RET(CyU3PPibDllConfigure(CYU3P_PIB_DLL_MASTER, slave_delay, core_phase, sync_phase, output_phase, true));
 
   CHECK_API_RET(CyU3PGpifLoad(&CyFxGpifConfig));
+
+  // Configure sockets
+  // CyU3PGpifSocketConfigure(0, CY_U3P_PIB_SOCKET_0, 6, false, 1);
+  // CyU3PGpifSocketConfigure(1, CY_U3P_PIB_SOCKET_3, 6, false, 1);
 
   // Overflow callback
   CyU3PPibRegisterCallback(PibEventCallback, 0xFFFF);
@@ -299,10 +330,10 @@ void CyFxApplnInit(void) {
 
   // GPIO configs
   CHECK_API_RET(CyU3PDeviceGpioOverride(LED_GPIO, true));
-  gpioConfig.outValue = CyTrue;
-  gpioConfig.driveLowEn = CyTrue;
-  gpioConfig.driveHighEn = CyTrue;
-  gpioConfig.inputEn = CyFalse;
+  gpioConfig.outValue = true;
+  gpioConfig.driveLowEn = true;
+  gpioConfig.driveHighEn = true;
+  gpioConfig.inputEn = false;
   gpioConfig.intrMode = CY_U3P_GPIO_NO_INTR;
   CHECK_API_RET(CyU3PGpioSetSimpleConfig(LED_GPIO, &gpioConfig));
 
@@ -330,14 +361,18 @@ void ApplnThread_Entry(uint32_t input) {
   CyFxApplnInit();
 
   for (;;) {
+    uint8_t state;
+    CyU3PGpifGetSMState(&state);
+    CyU3PDebugPrint(4, "State: 0x%x", state);
+
     if (glIsApplnActive) {
       CyU3PGpioSetValue(LED_GPIO, false);
-      CyU3PThreadSleep(100);
+      CyU3PThreadSleep(10);
       CyU3PGpioSetValue(LED_GPIO, true);
     } else {
       CyU3PGpioSetValue(LED_GPIO, true);
     }
-    CyU3PThreadSleep(100);
+    CyU3PThreadSleep(10);
   }
 }
 
@@ -369,16 +404,23 @@ void CyFxApplicationDefine() {
 
 int main(void) {
   CyU3PIoMatrixConfig_t io_cfg;
+  CyU3PSysClockConfig_t clkCfg;
   CyU3PReturnStatus_t status = CY_U3P_SUCCESS;
 
   /* Initialize the device */
-  status = CyU3PDeviceInit(NULL);
+  clkCfg.setSysClk400 = true;     /* FX3 device's master clock is set to a frequency > 400 MHz */
+  clkCfg.cpuClkDiv = 2;           /* CPU clock divider */
+  clkCfg.dmaClkDiv = 2;           /* DMA clock divider */
+  clkCfg.mmioClkDiv = 2;          /* MMIO clock divider */
+  clkCfg.useStandbyClk = false;   /* device has no 32KHz clock supplied */
+  clkCfg.clkSrc = CY_U3P_SYS_CLK; /* Clock source for a peripheral block  */
+  status = CyU3PDeviceInit(&clkCfg);
   if (status != CY_U3P_SUCCESS) {
     goto handle_fatal_error;
   }
 
-  /* Initialize the caches. Enable both Instruction and Data Caches. */
-  status = CyU3PDeviceCacheControl(true, true, true);
+  /* Initialize the caches. */
+  status = CyU3PDeviceCacheControl(true, false, false);
   if (status != CY_U3P_SUCCESS) {
     goto handle_fatal_error;
   }
@@ -392,7 +434,6 @@ int main(void) {
   io_cfg.useI2S = false;
   io_cfg.useSpi = false;
   io_cfg.lppMode = CY_U3P_IO_MATRIX_LPP_DEFAULT;
-  /* No GPIOs are enabled. */
   io_cfg.gpioSimpleEn[0] = 0;
   io_cfg.gpioSimpleEn[1] = 0;
   io_cfg.gpioComplexEn[0] = 0;

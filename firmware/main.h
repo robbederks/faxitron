@@ -8,8 +8,7 @@
 #define CY_FX_APPLN_THREAD_STACK 0x1000
 #define CY_FX_APPLN_THREAD_PRIORITY 8
 
-#define DMA_IN_BUF_SIZE  1024 // Size of DMA buffer used for DEV to USB transfer.
-#define DMA_OUT_BUF_SIZE 1024 // Size of DMA buffer used for USB to DEV transfer.
+#define DMA_BUF_SIZE 1024 // Size of DMA buffer used for data transfers.
 
 #define CY_FX_DMA_BUF_COUNT_P_2_U 1 // Number of DMA buffers used for DEV to USB transfer.
 #define CY_FX_DMA_BUF_COUNT_U_2_P 1 // Number of DMA buffers used for USB to DEV transfer.
