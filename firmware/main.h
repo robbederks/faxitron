@@ -34,6 +34,8 @@
 #define CY_FX_EP_DEBUG 0x8A    /* EP 10 IN */
 #define CY_FX_EP_DEBUG_SOCKET CY_U3P_UIB_SOCKET_CONS_10 // Needs to match the endpoint
 
+#define LED_GPIO 54
+
 /* Extern definitions for the USB Descriptors */
 extern const uint8_t CyFxUSB20DeviceDscr[];
 extern const uint8_t CyFxUSB30DeviceDscr[];
