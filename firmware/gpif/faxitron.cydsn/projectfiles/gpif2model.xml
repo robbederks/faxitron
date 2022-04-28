@@ -23,7 +23,7 @@
       <IntialValue>High</IntialValue>
       <Polarity>ActiveLow</Polarity>
       <Delay>Alpha</Delay>
-      <AssetionType>Toggle</AssetionType>
+      <AssetionType>Assert</AssetionType>
     </Signal>
     <Signal ElementId="OUTPUT1" SignalType="Output" SpecialFunction="None">
       <DisplayName>TXEN</DisplayName>
@@ -31,7 +31,7 @@
       <IntialValue>High</IntialValue>
       <Polarity>ActiveLow</Polarity>
       <Delay>Alpha</Delay>
-      <AssetionType>Toggle</AssetionType>
+      <AssetionType>Assert</AssetionType>
     </Signal>
     <Signal ElementId="INPUT4" SignalType="Input" SpecialFunction="None">
       <DisplayName>TXHALF</DisplayName>
@@ -149,7 +149,7 @@
       <RepeatCount>0</RepeatCount>
     </State>
     <Transition ElementId="TRANSITION0" SourceState="STARTSTATE0" DestinationState="STATE0" Equation="LOGIC_ONE" />
-    <Transition ElementId="TRANSITION1" SourceState="STATE0" DestinationState="STATE1" Equation="!RXEMPTY &amp; DMA_RDY_TH0" />
+    <Transition ElementId="TRANSITION1" SourceState="STATE0" DestinationState="STATE1" Equation="RXHALF &amp; DMA_RDY_TH0" />
     <Transition ElementId="TRANSITION2" SourceState="STATE1" DestinationState="STATE2" Equation="LOGIC_ONE" />
     <Transition ElementId="TRANSITION3" SourceState="STATE2" DestinationState="STATE0" Equation="LOGIC_ONE" />
     <Transition ElementId="TRANSITION7" SourceState="STATE5" DestinationState="STATE3" Equation="DMA_RDY_TH1" />

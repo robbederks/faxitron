@@ -159,7 +159,7 @@
     </CyTransition>
     <CyTransition>
       <Name>TRANSITION1</Name>
-      <TransitionEquation>!RXEMPTY &amp; DMA_RDY_TH0</TransitionEquation>
+      <TransitionEquation>RXHALF &amp; DMA_RDY_TH0</TransitionEquation>
       <SourceName>STATE0</SourceName>
       <SinkName>STATE1</SinkName>
       <SourceConnectorName>Connector</SourceConnectorName>

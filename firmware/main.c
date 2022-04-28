@@ -319,17 +319,7 @@ void CyFxApplnInit(void) {
   pibClock.isDllEnable = false;
   CHECK_API_RET(CyU3PPibInit(true, &pibClock));
 
-  // CyU3PPibClockPhase_t core_phase = CYU3P_PIB_CLK_PHASE_01;   /**< Clock phase 1. Lags phase 0 by 22.5 degrees. */
-  // CyU3PPibClockPhase_t sync_phase = CYU3P_PIB_CLK_PHASE_00;   /**< Clock phase 0. No delay from master clock. */
-  // CyU3PPibClockPhase_t output_phase = CYU3P_PIB_CLK_PHASE_11; /**< Clock phase 11. Lags phase 0 by 247.5 degrees. */
-  // uint16_t slave_delay = 0;
-  // CHECK_API_RET(CyU3PPibDllConfigure(CYU3P_PIB_DLL_MASTER_SLAVE, slave_delay, core_phase, sync_phase, output_phase, false));
-
   CHECK_API_RET(CyU3PGpifLoad(&CyFxGpifConfig));
-
-  // Configure sockets
-  // CyU3PGpifSocketConfigure(0, CY_U3P_PIB_SOCKET_0, 6, false, 1);
-  // CyU3PGpifSocketConfigure(1, CY_U3P_PIB_SOCKET_3, 6, false, 1);
 
   // Overflow callback
   CyU3PPibRegisterCallback(PibEventCallback, 0xFFFF);
@@ -343,7 +333,7 @@ void CyFxApplnInit(void) {
   CHECK_API_RET(CyU3PGpioInit(&gpioClock, NULL));
 
   // GPIO configs
-  // TODO: the GPIO to 32
+  config_gpio(GPIO_TXSCD, false, true, true, false);
   config_gpio(GPIO_TXHALT_N, false, true, true, true);
   config_gpio(GPIO_RESET_N, false, true, true, true);
   config_gpio(GPIO_DLB, false, true, true, true);
@@ -458,7 +448,6 @@ int main(void) {
   io_cfg.useSpi = false;
   io_cfg.lppMode = CY_U3P_IO_MATRIX_LPP_UART_ONLY;
   io_cfg.gpioSimpleEn[0] = 0;
-  //io_cfg.gpioSimpleEn[0] = /*(1 << 12) | (1 << 13) | (1 << 14) | (1 << 15) |*/ (1 << 16) | (1 << 19);
   io_cfg.gpioSimpleEn[1] = (1 << 1) | (1 << 2) | (1 << 3) | (1 << 4);
   io_cfg.gpioComplexEn[0] = 0;
   io_cfg.gpioComplexEn[1] = 0;

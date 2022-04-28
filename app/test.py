@@ -89,7 +89,7 @@ if __name__ == '__main__':
       print('re', e)
 
     try:
-      f.write_data(b"A"*255)
+      f.write_data(b"ABCDEFGH"*16)
       i += 1
       if i%1000 == 0:
         print(i)
