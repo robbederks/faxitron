@@ -68,7 +68,7 @@ void CyFxApplnStart(void) {
   CHECK_API_RET(CyU3PSetEpConfig(CY_FX_EP_CONSUMER, &epCfg));
 
   // DMA channels
-  dmaCfg.size = DMA_BUF_SIZE;
+  dmaCfg.size = size;
   dmaCfg.count = CY_FX_DMA_BUF_COUNT_U_2_P;
   dmaCfg.dmaMode = CY_U3P_DMA_MODE_BYTE;
   dmaCfg.notification = 0;
@@ -190,6 +190,7 @@ CyBool_t CyFxApplnUSBSetupCB(uint32_t setupdat0, uint32_t setupdat1) {
           CyU3PDmaChannelSetXfer(&glChHandleUtoP, CY_FX_DMA_TX_SIZE);
 
           CyU3PUsbSetEpNak(CY_FX_EP_PRODUCER, false);
+          CyU3PUsbAckSetup();
         }
 
         if (wIndex == CY_FX_EP_CONSUMER) {
@@ -202,6 +203,7 @@ CyBool_t CyFxApplnUSBSetupCB(uint32_t setupdat0, uint32_t setupdat1) {
           CyU3PDmaChannelSetXfer(&glChHandlePtoU, CY_FX_DMA_RX_SIZE);
 
           CyU3PUsbSetEpNak(CY_FX_EP_CONSUMER, false);
+          CyU3PUsbAckSetup();
         }
 
         CyU3PUsbStall(wIndex, false, true);
@@ -291,25 +293,37 @@ static void PibEventCallback(CyU3PPibIntrType cbType, uint16_t cbArg) {
   }
 }
 
+void config_gpio(uint8_t gpio, bool input, bool drive_low, bool drive_high, bool initial_value) {
+  CyU3PGpioSimpleConfig_t gpioConfig;
+  CyU3PReturnStatus_t apiRetStatus = CY_U3P_SUCCESS;
+
+  CHECK_API_RET(CyU3PDeviceGpioOverride(gpio, true));
+  gpioConfig.outValue = initial_value;
+  gpioConfig.driveLowEn = drive_low;
+  gpioConfig.driveHighEn = drive_high;
+  gpioConfig.inputEn = input;
+  gpioConfig.intrMode = CY_U3P_GPIO_NO_INTR;
+  CHECK_API_RET(CyU3PGpioSetSimpleConfig(gpio, &gpioConfig));
+}
+
 // Init app when SET_CONF is received
 void CyFxApplnInit(void) {
   CyU3PReturnStatus_t apiRetStatus = CY_U3P_SUCCESS;
   CyU3PPibClock_t pibClock;
   CyU3PGpioClock_t gpioClock;
-  CyU3PGpioSimpleConfig_t gpioConfig;
 
   // Init P-port (GPIF)
-  pibClock.clkDiv = 8;
-  pibClock.clkSrc = CY_U3P_SYS_CLK;
+  pibClock.clkDiv = 2;
+  pibClock.clkSrc = CY_U3P_SYS_CLK_BY_16; // 15MHz
   pibClock.isHalfDiv = false;
-  pibClock.isDllEnable = true;
+  pibClock.isDllEnable = false;
   CHECK_API_RET(CyU3PPibInit(true, &pibClock));
 
-  CyU3PPibClockPhase_t core_phase = CYU3P_PIB_CLK_PHASE_01;   /**< Clock phase 1. Lags phase 0 by 22.5 degrees. */
-  CyU3PPibClockPhase_t sync_phase = CYU3P_PIB_CLK_PHASE_00;   /**< Clock phase 0. No delay from master clock. */
-  CyU3PPibClockPhase_t output_phase = CYU3P_PIB_CLK_PHASE_11; /**< Clock phase 11. Lags phase 0 by 247.5 degrees. */
-  uint16_t slave_delay = 0;
-  CHECK_API_RET(CyU3PPibDllConfigure(CYU3P_PIB_DLL_MASTER, slave_delay, core_phase, sync_phase, output_phase, true));
+  // CyU3PPibClockPhase_t core_phase = CYU3P_PIB_CLK_PHASE_01;   /**< Clock phase 1. Lags phase 0 by 22.5 degrees. */
+  // CyU3PPibClockPhase_t sync_phase = CYU3P_PIB_CLK_PHASE_00;   /**< Clock phase 0. No delay from master clock. */
+  // CyU3PPibClockPhase_t output_phase = CYU3P_PIB_CLK_PHASE_11; /**< Clock phase 11. Lags phase 0 by 247.5 degrees. */
+  // uint16_t slave_delay = 0;
+  // CHECK_API_RET(CyU3PPibDllConfigure(CYU3P_PIB_DLL_MASTER_SLAVE, slave_delay, core_phase, sync_phase, output_phase, false));
 
   CHECK_API_RET(CyU3PGpifLoad(&CyFxGpifConfig));
 
@@ -329,13 +343,11 @@ void CyFxApplnInit(void) {
   CHECK_API_RET(CyU3PGpioInit(&gpioClock, NULL));
 
   // GPIO configs
-  CHECK_API_RET(CyU3PDeviceGpioOverride(LED_GPIO, true));
-  gpioConfig.outValue = true;
-  gpioConfig.driveLowEn = true;
-  gpioConfig.driveHighEn = true;
-  gpioConfig.inputEn = false;
-  gpioConfig.intrMode = CY_U3P_GPIO_NO_INTR;
-  CHECK_API_RET(CyU3PGpioSetSimpleConfig(LED_GPIO, &gpioConfig));
+  // TODO: the GPIO to 32
+  config_gpio(GPIO_TXHALT_N, false, true, true, true);
+  config_gpio(GPIO_RESET_N, false, true, true, true);
+  config_gpio(GPIO_DLB, false, true, true, true);
+  config_gpio(GPIO_LED_N, false, true, false, true);
 
   // Start the USB functionality.
   CHECK_API_RET(CyU3PUsbStart());
@@ -366,13 +378,13 @@ void ApplnThread_Entry(uint32_t input) {
     CyU3PDebugPrint(4, "State: 0x%x", state);
 
     if (glIsApplnActive) {
-      CyU3PGpioSetValue(LED_GPIO, false);
-      CyU3PThreadSleep(10);
-      CyU3PGpioSetValue(LED_GPIO, true);
+      CyU3PGpioSetValue(GPIO_LED_N, false);
+      CyU3PThreadSleep(100);
+      CyU3PGpioSetValue(GPIO_LED_N, true);
     } else {
-      CyU3PGpioSetValue(LED_GPIO, true);
+      CyU3PGpioSetValue(GPIO_LED_N, true);
     }
-    CyU3PThreadSleep(10);
+    CyU3PThreadSleep(100);
   }
 }
 
@@ -425,7 +437,18 @@ int main(void) {
     goto handle_fatal_error;
   }
 
-  /* No LPP or GPIO is being used. */
+  // IO config:
+  // - 12: LFI_N
+  // - 13: RXRST_N
+  // - 14: RFEN
+  // - 15: TXRST_N
+  // - 17: RXEN_N
+  // - 18: TXEN_N
+  // - 19: TXSC/D
+  // - 33: TXHALT_N
+  // - 34: RESET_N
+  // - 35: DLB
+  // - 46-49: UART (TODO)
   io_cfg.isDQ32Bit = false;
   io_cfg.s0Mode = CY_U3P_SPORT_INACTIVE;
   io_cfg.s1Mode = CY_U3P_SPORT_INACTIVE;
@@ -433,9 +456,10 @@ int main(void) {
   io_cfg.useI2C = false;
   io_cfg.useI2S = false;
   io_cfg.useSpi = false;
-  io_cfg.lppMode = CY_U3P_IO_MATRIX_LPP_DEFAULT;
+  io_cfg.lppMode = CY_U3P_IO_MATRIX_LPP_UART_ONLY;
   io_cfg.gpioSimpleEn[0] = 0;
-  io_cfg.gpioSimpleEn[1] = 0;
+  //io_cfg.gpioSimpleEn[0] = /*(1 << 12) | (1 << 13) | (1 << 14) | (1 << 15) |*/ (1 << 16) | (1 << 19);
+  io_cfg.gpioSimpleEn[1] = (1 << 1) | (1 << 2) | (1 << 3) | (1 << 4);
   io_cfg.gpioComplexEn[0] = 0;
   io_cfg.gpioComplexEn[1] = 0;
   status = CyU3PDeviceConfigureIOMatrix(&io_cfg);

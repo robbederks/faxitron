@@ -1,6 +1,6 @@
 /*
  * Project Name: faxitron.cyfx
- * Time : 04/26/2022 22:52:25
+ * Time : 04/28/2022 22:49:36
  * Device Type: FX3
  * Project Type: GPIF2
  *
@@ -45,7 +45,7 @@
    Transition function values used in the state machine.
  */
 uint16_t CyFxGpifTransition[]  = {
-    0x0000, 0x4444, 0xFFFF, 0x2222, 0xBBBB, 0xDDDD
+    0x0000, 0x4444, 0xFFFF, 0xAAAA, 0xBBBB, 0xDDDD
 };
 
 /* Summary
@@ -82,13 +82,13 @@ uint32_t CyFxGpifRegValue[]  = {
     0x00000000,  /*  CY_U3P_PIB_GPIF_INTR_MASK */
     0x00000082,  /*  CY_U3P_PIB_GPIF_SERIAL_IN_CONFIG */
     0x00000782,  /*  CY_U3P_PIB_GPIF_SERIAL_OUT_CONFIG */
-    0x54000015,  /*  CY_U3P_PIB_GPIF_CTRL_BUS_DIRECTION */
+    0x54000005,  /*  CY_U3P_PIB_GPIF_CTRL_BUS_DIRECTION */
     0x0000FE07,  /*  CY_U3P_PIB_GPIF_CTRL_BUS_DEFAULT */
     0x00000003,  /*  CY_U3P_PIB_GPIF_CTRL_BUS_POLARITY */
     0x00000003,  /*  CY_U3P_PIB_GPIF_CTRL_BUS_TOGGLE */
     0x00000000,  /*  CY_U3P_PIB_GPIF_CTRL_BUS_SELECT */
     0x00000001,  /*  CY_U3P_PIB_GPIF_CTRL_BUS_SELECT */
-    0x00000002,  /*  CY_U3P_PIB_GPIF_CTRL_BUS_SELECT */
+    0x00000000,  /*  CY_U3P_PIB_GPIF_CTRL_BUS_SELECT */
     0x00000000,  /*  CY_U3P_PIB_GPIF_CTRL_BUS_SELECT */
     0x00000000,  /*  CY_U3P_PIB_GPIF_CTRL_BUS_SELECT */
     0x00000000,  /*  CY_U3P_PIB_GPIF_CTRL_BUS_SELECT */

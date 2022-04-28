@@ -33,14 +33,6 @@
       <Delay>Alpha</Delay>
       <AssetionType>Toggle</AssetionType>
     </Signal>
-    <Signal ElementId="OUTPUT2" SignalType="Output" SpecialFunction="None">
-      <DisplayName>TXSCD</DisplayName>
-      <GPIOPinNumber>GPIO_19</GPIOPinNumber>
-      <IntialValue>Low</IntialValue>
-      <Polarity>ActiveHigh</Polarity>
-      <Delay>Alpha</Delay>
-      <AssetionType>Assert</AssetionType>
-    </Signal>
     <Signal ElementId="INPUT4" SignalType="Input" SpecialFunction="None">
       <DisplayName>TXHALF</DisplayName>
       <GPIOPinNumber>GPIO_24</GPIOPinNumber>
@@ -91,7 +83,6 @@
       <RepeatUntillNextTransition>True</RepeatUntillNextTransition>
       <RepeatCount>0</RepeatCount>
     </State>
-    <Transition ElementId="TRANSITION0" SourceState="STARTSTATE0" DestinationState="STATE0" Equation="LOGIC_ONE" />
     <State ElementId="STATE1" StateType="NormalState">
       <DisplayName>RX_BEGIN</DisplayName>
       <RepeatUntillNextTransition>False</RepeatUntillNextTransition>
@@ -106,7 +97,6 @@
         <WriteDataIntoDataSink>False</WriteDataIntoDataSink>
       </Action>
     </State>
-    <Transition ElementId="TRANSITION1" SourceState="STATE0" DestinationState="STATE1" Equation="!RXEMPTY &amp; DMA_RDY_TH0" />
     <State ElementId="STATE2" StateType="NormalState">
       <DisplayName>RX_READ</DisplayName>
       <RepeatUntillNextTransition>False</RepeatUntillNextTransition>
@@ -121,8 +111,6 @@
         <WriteDataIntoDataSink>True</WriteDataIntoDataSink>
       </Action>
     </State>
-    <Transition ElementId="TRANSITION2" SourceState="STATE1" DestinationState="STATE2" Equation="LOGIC_ONE" />
-    <Transition ElementId="TRANSITION3" SourceState="STATE2" DestinationState="STATE0" Equation="LOGIC_ONE" />
     <State ElementId="STATE3" StateType="NormalState">
       <DisplayName>TX_BEGIN</DisplayName>
       <RepeatUntillNextTransition>False</RepeatUntillNextTransition>
@@ -139,7 +127,6 @@
         <UpdateSource>True</UpdateSource>
       </Action>
     </State>
-    <Transition ElementId="TRANSITION7" SourceState="STATE5" DestinationState="STATE3" Equation="DMA_RDY_TH1 &amp; !TXFULL" />
     <State ElementId="STATE4" StateType="NormalState">
       <DisplayName>TX_WRITE</DisplayName>
       <RepeatUntillNextTransition>False</RepeatUntillNextTransition>
@@ -156,13 +143,18 @@
         <ControlPinName>TXEN</ControlPinName>
       </Action>
     </State>
-    <Transition ElementId="TRANSITION5" SourceState="STATE3" DestinationState="STATE4" Equation="LOGIC_ONE" />
-    <Transition ElementId="TRANSITION6" SourceState="STATE4" DestinationState="STATE0" Equation="LOGIC_ONE" />
     <State ElementId="STATE5" StateType="NormalState">
       <DisplayName>CHECK_TX</DisplayName>
       <RepeatUntillNextTransition>True</RepeatUntillNextTransition>
       <RepeatCount>0</RepeatCount>
     </State>
+    <Transition ElementId="TRANSITION0" SourceState="STARTSTATE0" DestinationState="STATE0" Equation="LOGIC_ONE" />
+    <Transition ElementId="TRANSITION1" SourceState="STATE0" DestinationState="STATE1" Equation="!RXEMPTY &amp; DMA_RDY_TH0" />
+    <Transition ElementId="TRANSITION2" SourceState="STATE1" DestinationState="STATE2" Equation="LOGIC_ONE" />
+    <Transition ElementId="TRANSITION3" SourceState="STATE2" DestinationState="STATE0" Equation="LOGIC_ONE" />
+    <Transition ElementId="TRANSITION7" SourceState="STATE5" DestinationState="STATE3" Equation="DMA_RDY_TH1" />
+    <Transition ElementId="TRANSITION5" SourceState="STATE3" DestinationState="STATE4" Equation="LOGIC_ONE" />
+    <Transition ElementId="TRANSITION6" SourceState="STATE4" DestinationState="STATE0" Equation="LOGIC_ONE" />
     <Transition ElementId="TRANSITION8" SourceState="STATE0" DestinationState="STATE5" Equation="RXEMPTY | !DMA_RDY_TH0" />
     <Transition ElementId="TRANSITION9" SourceState="STATE5" DestinationState="STATE0" Equation="!DMA_RDY_TH1 | TXFULL" />
   </StateMachine>

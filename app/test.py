@@ -80,18 +80,20 @@ if __name__ == '__main__':
   while 1:
     f.read_logs()
 
-    # try:
-    #   dat = f.read_data()
-    #   print('read', dat)
-    # except Exception as e:
-    #   print('re', e)
+    try:
+      dat = f.read_data()
+      if dat is not None:
+        print('read', dat)
+        print(len(dat))
+    except Exception as e:
+      print('re', e)
 
     try:
-      f.write_data(b"A"*256)
+      f.write_data(b"A"*255)
       i += 1
       if i%1000 == 0:
         print(i)
     except Exception as e:
       print('we', e)
-    #time.sleep(0.01)
+    time.sleep(0.01)
 
