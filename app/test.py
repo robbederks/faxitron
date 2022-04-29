@@ -6,6 +6,8 @@ import time
 import struct
 import subprocess
 
+from binascii import hexlify
+
 dir = os.path.dirname(os.path.realpath(__file__))
 FW_PATH = f"{dir}/../firmware/faxitron.img"
 
@@ -63,37 +65,59 @@ class Faxitron:
 
   def read_data(self):
     try:
-      return self.handle.bulkRead(Faxitron.DATA_IN_EP, 256, timeout=100)
+      dat = self.handle.bulkRead(Faxitron.DATA_IN_EP, 256, timeout=100)
+      assert len(dat) % 2 == 0
+      print("READ", hexlify(dat, sep=' ', bytes_per_sep=2))
+      print()
+
+      res = []
+      for i in range(len(dat) // 2):
+        res.append(dat[2*i] + ((dat[2*i+1] & 0x0F) << 8))
+      return res
     except usb1.USBErrorTimeout:
       return None
 
   def write_data(self, dat):
-    assert len(dat) <= 256, "TODO: loop over data"
-    return self.handle.bulkWrite(Faxitron.DATA_OUT_EP, dat, timeout=100)
+    assert len(dat) <= 128, "TODO: loop over data"
+
+    # we need to pad it since it's 16 bits
+    arr = b"".join(map(lambda t: ((t & 0xFFF) | 0xE000).to_bytes(2, byteorder='little'), dat))
+
+    print("WRITE", hexlify(arr, sep=' ', bytes_per_sep=2))
+    print()
+
+    return self.handle.bulkWrite(Faxitron.DATA_OUT_EP, arr, timeout=100)
+
 
 if __name__ == '__main__':
   f = Faxitron()
 
   time.sleep(0.2)
 
-  i=0
-  while 1:
-    f.read_logs()
+  # Clear buffers
+  while f.read_data() is not None:
+    pass
 
-    try:
-      dat = f.read_data()
-      if dat is not None:
-        print('read', dat)
-        print(len(dat))
-    except Exception as e:
-      print('re', e)
+  dat = os.urandom(10000)
+  tx_buf = dat[:]
+  rx_buf = b""
+  while len(tx_buf) > 0:
+    f.write_data(tx_buf[:128])
+    tx_buf = tx_buf[128:]
 
-    try:
-      f.write_data(b"ABCDEFGH"*16)
-      i += 1
-      if i%1000 == 0:
-        print(i)
-    except Exception as e:
-      print('we', e)
-    time.sleep(0.01)
+    t = f.read_data()
+    if t:
+      rx_buf += bytearray(t)
+    #f.read_logs()
+
+  st = time.time()
+  while time.time() - st < 1:
+    t = f.read_data()
+    if t:
+      rx_buf += bytearray(t)
+
+  print(dat[:200], "\n")
+  print(rx_buf[:200])
+
+  print(len(dat), len(rx_buf))
 

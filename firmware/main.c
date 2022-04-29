@@ -313,7 +313,7 @@ void CyFxApplnInit(void) {
   CyU3PGpioClock_t gpioClock;
 
   // Init P-port (GPIF)
-  pibClock.clkDiv = 2;
+  pibClock.clkDiv = 32;
   pibClock.clkSrc = CY_U3P_SYS_CLK_BY_16; // 15MHz
   pibClock.isHalfDiv = false;
   pibClock.isDllEnable = false;
@@ -446,7 +446,7 @@ int main(void) {
   io_cfg.useI2C = false;
   io_cfg.useI2S = false;
   io_cfg.useSpi = false;
-  io_cfg.lppMode = CY_U3P_IO_MATRIX_LPP_UART_ONLY;
+  io_cfg.lppMode = CY_U3P_IO_MATRIX_LPP_DEFAULT;
   io_cfg.gpioSimpleEn[0] = 0;
   io_cfg.gpioSimpleEn[1] = (1 << 1) | (1 << 2) | (1 << 3) | (1 << 4);
   io_cfg.gpioComplexEn[0] = 0;

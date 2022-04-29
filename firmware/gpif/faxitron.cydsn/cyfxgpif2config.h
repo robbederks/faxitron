@@ -1,6 +1,6 @@
 /*
  * Project Name: faxitron.cyfx
- * Time : 04/28/2022 23:15:55
+ * Time : 04/30/2022 00:52:35
  * Device Type: FX3
  * Project Type: GPIF2
  *
@@ -21,18 +21,16 @@
 /* Summary
    Number of states in the state machine
  */
-#define CY_NUMBER_OF_STATES 7
+#define CY_NUMBER_OF_STATES 5
 
 /* Summary
    Mapping of user defined state names to state indices
  */
 #define START 0
 #define IDLE 1
-#define RX_BEGIN 2
-#define RX_READ 4
-#define TX_BEGIN 5
-#define TX_WRITE 6
-#define CHECK_TX 3
+#define STATE1 2
+#define RX_SAMPLE 4
+#define TX 3
 
 
 /* Summary
@@ -45,7 +43,7 @@
    Transition function values used in the state machine.
  */
 uint16_t CyFxGpifTransition[]  = {
-    0x0000, 0x8888, 0xFFFF, 0xAAAA, 0xF3F3, 0xDDDD
+    0x0000, 0xAAAA, 0x3333, 0xFFFF, 0x5555
 };
 
 /* Summary
@@ -55,25 +53,23 @@ uint16_t CyFxGpifTransition[]  = {
    waveform table. 
  */
 CyU3PGpifWaveData CyFxGpifWavedata[]  = {
-    {{0x1E0F4401,0x00000508,0x80000000},{0x00000000,0x00000000,0x00000000}},
-    {{0x2E739C02,0x00000500,0xC0000000},{0x3E711A03,0x040008CA,0x80000000}},
-    {{0x2E739C04,0x20000000,0xC0000000},{0x00000000,0x00000000,0x00000000}},
-    {{0x2E739C05,0x04000840,0xC0000000},{0x1E0F4401,0x00000508,0x80000000}},
-    {{0x2E739C06,0x00000000,0xC0000000},{0x00000000,0x00000000,0x00000000}}
+    {{0x2E707A01,0x0404C002,0x81400000},{0x00000000,0x00000000,0x00000000}},
+    {{0x3E739C02,0x00400100,0xC0800000},{0x4E739A03,0x04000000,0x80000000}},
+    {{0x1E738304,0x20400000,0x80000000},{0x00000000,0x00000000,0x00000000}}
 };
 
 /* Summary
    Table that maps state indices to the descriptor table indices.
  */
 uint8_t CyFxGpifWavedataPosition[]  = {
-    0,1,2,3,0,4,0
+    0,1,2,0,0
 };
 
 /* Summary
    GPIF II configuration register values.
  */
 uint32_t CyFxGpifRegValue[]  = {
-    0x800083B0,  /*  CY_U3P_PIB_GPIF_CONFIG */
+    0x800083B8,  /*  CY_U3P_PIB_GPIF_CONFIG */
     0x00000067,  /*  CY_U3P_PIB_GPIF_BUS_CONFIG */
     0x00000000,  /*  CY_U3P_PIB_GPIF_BUS_CONFIG2 */
     0x00000052,  /*  CY_U3P_PIB_GPIF_AD_CONFIG */
@@ -83,11 +79,11 @@ uint32_t CyFxGpifRegValue[]  = {
     0x00000082,  /*  CY_U3P_PIB_GPIF_SERIAL_IN_CONFIG */
     0x00000782,  /*  CY_U3P_PIB_GPIF_SERIAL_OUT_CONFIG */
     0x54000005,  /*  CY_U3P_PIB_GPIF_CTRL_BUS_DIRECTION */
-    0x0000FE07,  /*  CY_U3P_PIB_GPIF_CTRL_BUS_DEFAULT */
-    0x00000003,  /*  CY_U3P_PIB_GPIF_CTRL_BUS_POLARITY */
+    0x0000FFFF,  /*  CY_U3P_PIB_GPIF_CTRL_BUS_DEFAULT */
+    0x000001FB,  /*  CY_U3P_PIB_GPIF_CTRL_BUS_POLARITY */
     0x00000000,  /*  CY_U3P_PIB_GPIF_CTRL_BUS_TOGGLE */
+    0x00000008,  /*  CY_U3P_PIB_GPIF_CTRL_BUS_SELECT */
     0x00000000,  /*  CY_U3P_PIB_GPIF_CTRL_BUS_SELECT */
-    0x00000001,  /*  CY_U3P_PIB_GPIF_CTRL_BUS_SELECT */
     0x00000000,  /*  CY_U3P_PIB_GPIF_CTRL_BUS_SELECT */
     0x00000000,  /*  CY_U3P_PIB_GPIF_CTRL_BUS_SELECT */
     0x00000000,  /*  CY_U3P_PIB_GPIF_CTRL_BUS_SELECT */

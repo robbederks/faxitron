@@ -6,10 +6,6 @@
   <Scenario Name="READ" CurrentThread="Thread0">
     <State StateId="STARTSTATE0" WaitNumber="0" />
     <State StateId="STATE0" WaitNumber="0" />
-    <State StateId="STATE1" WaitNumber="0" />
-    <State StateId="STATE2" WaitNumber="0" />
-    <State StateId="STATE0" WaitNumber="0" />
-    <State StateId="STATE0" WaitNumber="0" />
   </Scenario>
   <Scenario Name="WRITE" CurrentThread="Thread1">
     <State StateId="STARTSTATE0" WaitNumber="0" />
