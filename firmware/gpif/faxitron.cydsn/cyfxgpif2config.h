@@ -1,6 +1,6 @@
 /*
  * Project Name: faxitron.cyfx
- * Time : 04/30/2022 00:52:35
+ * Time : 04/30/2022 20:54:50
  * Device Type: FX3
  * Project Type: GPIF2
  *
@@ -21,7 +21,7 @@
 /* Summary
    Number of states in the state machine
  */
-#define CY_NUMBER_OF_STATES 5
+#define CY_NUMBER_OF_STATES 6
 
 /* Summary
    Mapping of user defined state names to state indices
@@ -30,6 +30,7 @@
 #define IDLE 1
 #define STATE1 2
 #define RX_SAMPLE 4
+#define STATE2 5
 #define TX 3
 
 
@@ -43,7 +44,7 @@
    Transition function values used in the state machine.
  */
 uint16_t CyFxGpifTransition[]  = {
-    0x0000, 0xAAAA, 0x3333, 0xFFFF, 0x5555
+    0x0000, 0x3333, 0xAAAA, 0xFFFF, 0x5555
 };
 
 /* Summary
@@ -53,16 +54,17 @@ uint16_t CyFxGpifTransition[]  = {
    waveform table. 
  */
 CyU3PGpifWaveData CyFxGpifWavedata[]  = {
-    {{0x2E707A01,0x0404C002,0x81400000},{0x00000000,0x00000000,0x00000000}},
+    {{0x1E707A01,0x0404C004,0x81400000},{0x00000000,0x00000000,0x00000000}},
     {{0x3E739C02,0x00400100,0xC0800000},{0x4E739A03,0x04000000,0x80000000}},
-    {{0x1E738304,0x20400000,0x80000000},{0x00000000,0x00000000,0x00000000}}
+    {{0x2E738304,0x20400000,0x80000000},{0x00000000,0x00000000,0x00000000}},
+    {{0x3E739C05,0x00000000,0x80100000},{0x00000000,0x00000000,0x00000000}}
 };
 
 /* Summary
    Table that maps state indices to the descriptor table indices.
  */
 uint8_t CyFxGpifWavedataPosition[]  = {
-    0,1,2,0,0
+    0,1,2,0,3,0
 };
 
 /* Summary

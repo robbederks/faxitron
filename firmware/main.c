@@ -69,7 +69,7 @@ void CyFxApplnStart(void) {
 
   // DMA channels
   dmaCfg.size = size;
-  dmaCfg.count = CY_FX_DMA_BUF_COUNT_U_2_P;
+  dmaCfg.count = 100;
   dmaCfg.dmaMode = CY_U3P_DMA_MODE_BYTE;
   dmaCfg.notification = 0;
   dmaCfg.cb = NULL;

@@ -105,7 +105,14 @@
         <ControlPinName>RXEN</ControlPinName>
       </Action>
     </State>
-    <Transition ElementId="TRANSITION14" SourceState="STATE8" DestinationState="STATE0" Equation="!RXEMPTY" />
+    <State ElementId="STATE2" StateType="NormalState">
+      <DisplayName>STATE2</DisplayName>
+      <RepeatUntillNextTransition>True</RepeatUntillNextTransition>
+      <RepeatCount>0</RepeatCount>
+      <Action ElementId="COMMIT0" ActionType="COMMIT">
+        <ThreadNumber>Thread0</ThreadNumber>
+      </Action>
+    </State>
     <Transition ElementId="TRANSITION15" SourceState="STATE0" DestinationState="STATE1" Equation="RXEMPTY" />
     <Transition ElementId="TRANSITION10" SourceState="STATE0" DestinationState="STATE3" Equation="DMA_RDY_TH1" />
     <State ElementId="STATE3" StateType="NormalState">
@@ -125,7 +132,9 @@
       </Action>
     </State>
     <Transition ElementId="TRANSITION0" SourceState="STARTSTATE0" DestinationState="STATE0" Equation="LOGIC_ONE" />
+    <Transition ElementId="TRANSITION18" SourceState="STATE2" DestinationState="STATE0" Equation="LOGIC_ONE" />
     <Transition ElementId="TRANSITION16" SourceState="STATE1" DestinationState="STATE8" Equation="LOGIC_ONE" />
     <Transition ElementId="TRANSITION6" SourceState="STATE3" DestinationState="STATE0" Equation="!DMA_RDY_TH1" />
+    <Transition ElementId="TRANSITION17" SourceState="STATE8" DestinationState="STATE2" Equation="!RXEMPTY" />
   </StateMachine>
 </GPIFIIModel>
