@@ -313,7 +313,8 @@ void CyFxApplnInit(void) {
   CyU3PGpioClock_t gpioClock;
 
   // Init P-port (GPIF)
-  pibClock.clkDiv = 32;
+  //pibClock.clkDiv = 24;
+  pibClock.clkDiv = 24;
   pibClock.clkSrc = CY_U3P_SYS_CLK_BY_16; // 15MHz
   pibClock.isHalfDiv = false;
   pibClock.isDllEnable = false;
@@ -336,7 +337,7 @@ void CyFxApplnInit(void) {
   config_gpio(GPIO_TXSCD, false, true, true, false);
   config_gpio(GPIO_TXHALT_N, false, true, true, true);
   config_gpio(GPIO_RESET_N, false, true, true, true);
-  config_gpio(GPIO_DLB, false, true, true, true);
+  config_gpio(GPIO_DLB, false, true, true, false);
   config_gpio(GPIO_LED_N, false, true, false, true);
 
   // Start the USB functionality.
