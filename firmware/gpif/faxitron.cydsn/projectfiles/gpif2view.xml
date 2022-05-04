@@ -2,8 +2,8 @@
 <Root version="4">
   <CyStates>
     <CyNormalState>
-      <Left>1045</Left>
-      <Top>216.446666666667</Top>
+      <Left>862</Left>
+      <Top>271.446666666667</Top>
       <Width>83</Width>
       <Height>70</Height>
       <Name>STATE0</Name>
@@ -13,8 +13,8 @@
       <ParentID>00000000-0000-0000-0000-000000000000</ParentID>
     </CyNormalState>
     <CyNormalState>
-      <Left>1368.36407945558</Left>
-      <Top>220.41</Top>
+      <Left>1185.36407945558</Left>
+      <Top>275.41</Top>
       <Width>83</Width>
       <Height>70</Height>
       <Name>STATE8</Name>
@@ -24,8 +24,8 @@
       <ParentID>00000000-0000-0000-0000-000000000000</ParentID>
     </CyNormalState>
     <CyNormalState>
-      <Left>796</Left>
-      <Top>446.41</Top>
+      <Left>613</Left>
+      <Top>501.41</Top>
       <Width>83</Width>
       <Height>70</Height>
       <Name>STATE3</Name>
@@ -35,8 +35,8 @@
       <ParentID>00000000-0000-0000-0000-000000000000</ParentID>
     </CyNormalState>
     <CyNormalState>
-      <Left>1382</Left>
-      <Top>61.4099999999999</Top>
+      <Left>1199</Left>
+      <Top>116.41</Top>
       <Width>83</Width>
       <Height>70</Height>
       <Name>STATE1</Name>
@@ -46,8 +46,8 @@
       <ParentID>00000000-0000-0000-0000-000000000000</ParentID>
     </CyNormalState>
     <CyNormalState>
-      <Left>1246</Left>
-      <Top>325.41</Top>
+      <Left>1063</Left>
+      <Top>380.41</Top>
       <Width>83</Width>
       <Height>70</Height>
       <Name>STATE2</Name>
@@ -57,8 +57,8 @@
       <ParentID>00000000-0000-0000-0000-000000000000</ParentID>
     </CyNormalState>
     <CyStartState>
-      <Left>814</Left>
-      <Top>39.4466666666667</Top>
+      <Left>631</Left>
+      <Top>94.4466666666667</Top>
       <Width>83</Width>
       <Height>70</Height>
       <Name>STARTSTATE0</Name>
@@ -104,7 +104,7 @@
     </CyTransition>
     <CyTransition>
       <Name>TRANSITION15</Name>
-      <TransitionEquation>RXEMPTY</TransitionEquation>
+      <TransitionEquation>!RXHALF</TransitionEquation>
       <SourceName>STATE0</SourceName>
       <SinkName>STATE1</SinkName>
       <SourceConnectorName>Connector</SourceConnectorName>

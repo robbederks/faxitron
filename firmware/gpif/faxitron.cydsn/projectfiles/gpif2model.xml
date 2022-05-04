@@ -10,7 +10,7 @@
       <InterfaceType>Master</InterfaceType>
       <CommunicationType>Synchronous</CommunicationType>
       <ClockSource>Internal</ClockSource>
-      <ClockEdge>Negative</ClockEdge>
+      <ClockEdge>Positive</ClockEdge>
       <Endianness>LittleEndian</Endianness>
       <DataBusWidth>Bit16</DataBusWidth>
       <AddressBuswidth>0</AddressBuswidth>
@@ -22,7 +22,7 @@
       <GPIOPinNumber>GPIO_17</GPIOPinNumber>
       <IntialValue>High</IntialValue>
       <Polarity>ActiveLow</Polarity>
-      <Delay>Beta</Delay>
+      <Delay>Alpha</Delay>
       <AssetionType>Assert</AssetionType>
     </Signal>
     <Signal ElementId="OUTPUT1" SignalType="Output" SpecialFunction="None">
@@ -56,7 +56,7 @@
     <Signal ElementId="INPUT0" SignalType="Input" SpecialFunction="None">
       <DisplayName>RXEMPTY</DisplayName>
       <GPIOPinNumber>GPIO_20</GPIOPinNumber>
-      <Polarity>ActiveLow</Polarity>
+      <Polarity>ActiveHigh</Polarity>
     </Signal>
     <Signal ElementId="INPUT5" SignalType="Input" SpecialFunction="None">
       <DisplayName>TXFULL</DisplayName>
@@ -86,7 +86,7 @@
     <State ElementId="STATE1" StateType="NormalState">
       <DisplayName>STATE1</DisplayName>
       <RepeatUntillNextTransition>False</RepeatUntillNextTransition>
-      <RepeatCount>2</RepeatCount>
+      <RepeatCount>0</RepeatCount>
       <Action ElementId="DR_GPIO0" ActionType="DR_GPIO">
         <ControlPinName>RXEN</ControlPinName>
       </Action>
@@ -107,14 +107,12 @@
     </State>
     <State ElementId="STATE2" StateType="NormalState">
       <DisplayName>STATE2</DisplayName>
-      <RepeatUntillNextTransition>True</RepeatUntillNextTransition>
+      <RepeatUntillNextTransition>False</RepeatUntillNextTransition>
       <RepeatCount>0</RepeatCount>
       <Action ElementId="COMMIT0" ActionType="COMMIT">
         <ThreadNumber>Thread0</ThreadNumber>
       </Action>
     </State>
-    <Transition ElementId="TRANSITION15" SourceState="STATE0" DestinationState="STATE1" Equation="RXEMPTY" />
-    <Transition ElementId="TRANSITION10" SourceState="STATE0" DestinationState="STATE3" Equation="DMA_RDY_TH1" />
     <State ElementId="STATE3" StateType="NormalState">
       <DisplayName>TX</DisplayName>
       <RepeatUntillNextTransition>True</RepeatUntillNextTransition>
@@ -131,6 +129,8 @@
         <ControlPinName>TXEN</ControlPinName>
       </Action>
     </State>
+    <Transition ElementId="TRANSITION15" SourceState="STATE0" DestinationState="STATE1" Equation="!RXHALF" />
+    <Transition ElementId="TRANSITION10" SourceState="STATE0" DestinationState="STATE3" Equation="DMA_RDY_TH1" />
     <Transition ElementId="TRANSITION0" SourceState="STARTSTATE0" DestinationState="STATE0" Equation="LOGIC_ONE" />
     <Transition ElementId="TRANSITION18" SourceState="STATE2" DestinationState="STATE0" Equation="LOGIC_ONE" />
     <Transition ElementId="TRANSITION16" SourceState="STATE1" DestinationState="STATE8" Equation="LOGIC_ONE" />

@@ -314,7 +314,7 @@ void CyFxApplnInit(void) {
 
   // Init P-port (GPIF)
   //pibClock.clkDiv = 24;
-  pibClock.clkDiv = 24;
+  pibClock.clkDiv = 10;
   pibClock.clkSrc = CY_U3P_SYS_CLK_BY_16; // 15MHz
   pibClock.isHalfDiv = false;
   pibClock.isDllEnable = false;

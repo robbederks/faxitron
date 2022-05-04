@@ -18,7 +18,8 @@ if __name__ == "__main__":
   time.sleep(0.1)
 
   start_exposure(f)
-  time.sleep(4)
+  print("Start XRAY")
+  #time.sleep(10)
   stop_exposure(f)
 
   d = []
@@ -34,9 +35,8 @@ if __name__ == "__main__":
     print(bin(c), hex(dat), bin(dat))
 
   with open(f"resp.dat", 'w') as out:
-    for _, dat in filtered:
-      if dat <= 255:
-        out.write(f"{dat}\n")
+    for _, dat in d:
+      out.write(f"{dat}\n")
 
   # plt.plot(list(map(lambda k: k[1], filtered)))
   # plt.show()
@@ -50,3 +50,5 @@ if __name__ == "__main__":
 
   plt.imshow(np.reshape(dat[:COLS*rows], (COLS, rows)), cmap="Greys")
   plt.show()
+
+  f.reset()
