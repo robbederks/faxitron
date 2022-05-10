@@ -22,7 +22,7 @@ if __name__ == "__main__":
 
   start_exposure(f)
   print("Start XRAY")
-  time.sleep(0.1)
+  time.sleep(17)
   stop_exposure(f)
 
   d = []
