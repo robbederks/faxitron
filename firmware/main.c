@@ -41,10 +41,10 @@ void CyFxApplnStart(void) {
       size = 64;
       break;
     case CY_U3P_HIGH_SPEED:
-      size = 128;
+      size = 512;
       break;
     case CY_U3P_SUPER_SPEED:
-      size = 512;
+      size = 1024;
       break;
     default:
       CyFxAppErrorHandler(CY_U3P_ERROR_FAILURE);
@@ -70,7 +70,7 @@ void CyFxApplnStart(void) {
 
   // DMA channels
   dmaCfg.size = size;
-  dmaCfg.count = 128;
+  dmaCfg.count = 100;
   dmaCfg.dmaMode = CY_U3P_DMA_MODE_BYTE;
   dmaCfg.notification = 0;
   dmaCfg.cb = NULL;

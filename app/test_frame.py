@@ -17,6 +17,9 @@ if __name__ == "__main__":
 
   time.sleep(0.1)
 
+  # Clear buffers
+  f.read_data(max=None, timeout=100)
+
   start_exposure(f)
   print("Start XRAY")
   time.sleep(0.1)
@@ -38,12 +41,9 @@ if __name__ == "__main__":
     for _, dat in d:
       out.write(f"{dat}\n")
 
-  plt.plot(list(map(lambda k: k[0], d)))
-  plt.show()
+  dat = list(map(lambda k: k[1], filtered))
 
-  dat = list(map(lambda k: k[1], d))
-
-  COLS = 1024
+  COLS = 1026
   print(len(dat))
   rows = len(dat) // COLS
   print(rows)

@@ -136,7 +136,7 @@ const uint8_t CyFxUSBSSConfigDscr[] __attribute__ ((aligned (32))) = {
   CY_U3P_USB_ENDPNT_DESCR,        /* Endpoint descriptor type */
   CY_FX_EP_DEBUG,                 /* Endpoint address and description */
   CY_U3P_USB_EP_INTR,             /* Interrupt endpoint type */
-  0x00,0x01,                      /* Max packet size = 256 bytes */
+  0x00,0x04,                      /* Max packet size = 1024 bytes */
   0x01,                           /* Servicing interval for data transfers : 1 - Every micro-frame. */
 
   /* Super speed endpoint companion descriptor for consumer EP */
@@ -144,7 +144,7 @@ const uint8_t CyFxUSBSSConfigDscr[] __attribute__ ((aligned (32))) = {
   CY_U3P_SS_EP_COMPN_DESCR,       /* SS endpoint companion descriptor type */
   0x00,                           /* Max no. of packets in a burst : 0: burst 1 packet at a time */
   0x00,                           /* Max streams for bulk EP = 0 (No streams) */
-  0x00,0x01,                      /* Total number of bytes per service interval = 256 bytes. */
+  0x00,0x00,                      /* Service interval for the EP : 0 for bulk  */
 
   /* Endpoint descriptor for producer EP */
   0x07,                           /* Descriptor size */
