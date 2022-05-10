@@ -76,7 +76,7 @@ class Faxitron:
       last_len = -1
       while last_len != len(dat) and len(dat) < max:
         last_len = len(dat)
-        dat += self.handle.bulkRead(Faxitron.DATA_IN_EP, 256, timeout=timeout)
+        dat += self.handle.bulkRead(Faxitron.DATA_IN_EP, 512, timeout=timeout)
 
       assert len(dat) % 2 == 0
       DEBUG and print("READ", hexlify(dat, sep=' ', bytes_per_sep=2))

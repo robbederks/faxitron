@@ -19,17 +19,17 @@ if __name__ == "__main__":
 
   start_exposure(f)
   print("Start XRAY")
-  #time.sleep(10)
+  time.sleep(0.1)
   stop_exposure(f)
 
   d = []
   st = time.monotonic()
   while time.monotonic() - st < 3:
-    d.extend(map(lambda b: (b >> 10, b & 0x3FF), f.read_data(timeout=100)))
+    d.extend(map(lambda b: (b >> 10, b & 0x3FF), f.read_data(timeout=10)))
 
   print('TOTAL', len(d))
 
-  filtered = list(filter(lambda t: t[1] <= 255, d))
+  filtered = list(filter(lambda t: t[1] <= 400, d))
   print('SMALL', len(filtered))
   for c, dat in d[1000:1006]:
     print(bin(c), hex(dat), bin(dat))
@@ -38,10 +38,10 @@ if __name__ == "__main__":
     for _, dat in d:
       out.write(f"{dat}\n")
 
-  # plt.plot(list(map(lambda k: k[1], filtered)))
-  # plt.show()
+  plt.plot(list(map(lambda k: k[0], d)))
+  plt.show()
 
-  dat = list(map(lambda k: k[1], filtered))
+  dat = list(map(lambda k: k[1], d))
 
   COLS = 1024
   print(len(dat))

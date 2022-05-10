@@ -80,7 +80,7 @@
     </State>
     <State ElementId="STATE0" StateType="NormalState">
       <DisplayName>IDLE</DisplayName>
-      <RepeatUntillNextTransition>True</RepeatUntillNextTransition>
+      <RepeatUntillNextTransition>False</RepeatUntillNextTransition>
       <RepeatCount>5</RepeatCount>
     </State>
     <State ElementId="STATE1" StateType="NormalState">
@@ -129,12 +129,19 @@
         <ControlPinName>TXEN</ControlPinName>
       </Action>
     </State>
-    <Transition ElementId="TRANSITION15" SourceState="STATE0" DestinationState="STATE1" Equation="!RXHALF" />
-    <Transition ElementId="TRANSITION10" SourceState="STATE0" DestinationState="STATE3" Equation="DMA_RDY_TH1" />
+    <Transition ElementId="TRANSITION15" SourceState="STATE0" DestinationState="STATE1" Equation="RXEMPTY &amp; DMA_RDY_TH0" />
+    <Transition ElementId="TRANSITION2" SourceState="STATE4" DestinationState="STATE3" Equation="DMA_RDY_TH1" />
     <Transition ElementId="TRANSITION0" SourceState="STARTSTATE0" DestinationState="STATE0" Equation="LOGIC_ONE" />
     <Transition ElementId="TRANSITION18" SourceState="STATE2" DestinationState="STATE0" Equation="LOGIC_ONE" />
     <Transition ElementId="TRANSITION16" SourceState="STATE1" DestinationState="STATE8" Equation="LOGIC_ONE" />
     <Transition ElementId="TRANSITION6" SourceState="STATE3" DestinationState="STATE0" Equation="!DMA_RDY_TH1" />
-    <Transition ElementId="TRANSITION17" SourceState="STATE8" DestinationState="STATE2" Equation="!RXEMPTY" />
+    <Transition ElementId="TRANSITION17" SourceState="STATE8" DestinationState="STATE2" Equation="!RXEMPTY | !DMA_RDY_TH0" />
+    <Transition ElementId="TRANSITION3" SourceState="STATE0" DestinationState="STATE4" Equation="!RXEMPTY" />
+    <State ElementId="STATE4" StateType="NormalState">
+      <DisplayName>STATE4</DisplayName>
+      <RepeatUntillNextTransition>False</RepeatUntillNextTransition>
+      <RepeatCount>0</RepeatCount>
+    </State>
+    <Transition ElementId="TRANSITION4" SourceState="STATE4" DestinationState="STATE0" Equation="!DMA_RDY_TH1" />
   </StateMachine>
 </GPIFIIModel>
