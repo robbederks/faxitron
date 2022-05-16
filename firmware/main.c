@@ -11,6 +11,7 @@
 #include <cyu3pib.h>
 #include <cyu3gpio.h>
 #include <cyu3gpif.h>
+#include <pib_regs.h>
 
 // GPIF design
 #include "gpif/faxitron.cydsn/cyfxgpif2config.h"
@@ -40,10 +41,10 @@ void CyFxApplnStart(void) {
       size = 64;
       break;
     case CY_U3P_HIGH_SPEED:
-      size = 128;
+      size = 512;
       break;
     case CY_U3P_SUPER_SPEED:
-      size = 256;
+      size = 1024;
       break;
     default:
       CyFxAppErrorHandler(CY_U3P_ERROR_FAILURE);
@@ -312,13 +313,15 @@ void CyFxApplnInit(void) {
   CyU3PPibClock_t pibClock;
   CyU3PGpioClock_t gpioClock;
 
+
   // Init P-port (GPIF)
-  //pibClock.clkDiv = 24;
-  pibClock.clkDiv = 10;
+  pibClock.clkDiv = 25;
   pibClock.clkSrc = CY_U3P_SYS_CLK_BY_16; // 15MHz
   pibClock.isHalfDiv = false;
   pibClock.isDllEnable = false;
   CHECK_API_RET(CyU3PPibInit(true, &pibClock));
+
+  CHECK_API_RET(CyU3PPibDllConfigure(CYU3P_PIB_DLL_MASTER, 1000, 9, 5, 6, false));
 
   CHECK_API_RET(CyU3PGpifLoad(&CyFxGpifConfig));
 

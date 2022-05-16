@@ -70,20 +70,20 @@ class Faxitron:
         dat = dat[param:]
         print(f"Debug: Priority: {priority} Thread: {thread} Id: {hex(id)} Log: {log_str}")
 
-  def read_data(self, max=1024, timeout=50):
+  def read_data(self, max=None, timeout=50):
     try:
       dat = b""
       last_len = -1
-      while last_len != len(dat) and len(dat) < max:
+      while last_len != len(dat) and (max is None or len(dat) < max):
         last_len = len(dat)
-        dat += self.handle.bulkRead(Faxitron.DATA_IN_EP, 256, timeout=timeout)
+        dat += self.handle.bulkRead(Faxitron.DATA_IN_EP, 1024, timeout=timeout)
 
       assert len(dat) % 2 == 0
       DEBUG and print("READ", hexlify(dat, sep=' ', bytes_per_sep=2))
 
       res = []
       for i in range(len(dat) // 2):
-        res.append(dat[2*i] + ((dat[2*i+1] & 0x0F) << 8))
+        res.append((dat[2*i] & 0xFF) | ((dat[2*i+1] & 0x0F) << 8))
 
       return res
     except usb1.USBErrorTimeout:
