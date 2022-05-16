@@ -83,7 +83,7 @@ class Faxitron:
 
       res = []
       for i in range(len(dat) // 2):
-        res.append(dat[2*i] + ((dat[2*i+1] & 0x0F) << 8))
+        res.append((dat[2*i] & 0xFF) | ((dat[2*i+1] & 0x0F) << 8))
 
       return res
     except usb1.USBErrorTimeout:

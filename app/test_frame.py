@@ -6,11 +6,12 @@ from matplotlib import pyplot as plt
 from faxitron.faxitron import Faxitron
 
 def start_exposure(f):
-  f.write_data([0x9, 0x1])
+  #f.write_data([0x9, 0x1])
+  f.write_data([0x9, 0x7])
 
 def stop_exposure(f):
-  f.write_data([0x9, 0x2])
-
+  #f.write_data([0x9, 0x2])
+  f.write_data([0xF, 0xC])
 
 if __name__ == "__main__":
   f = Faxitron()
@@ -22,7 +23,7 @@ if __name__ == "__main__":
 
   start_exposure(f)
   print("Start XRAY")
-  time.sleep(17)
+  time.sleep(18)
   stop_exposure(f)
 
   d = []
@@ -51,4 +52,4 @@ if __name__ == "__main__":
   plt.imshow(np.reshape(dat[:COLS*rows], (COLS, rows)), cmap="Greys")
   plt.show()
 
-  f.reset()
+  # f.reset()
