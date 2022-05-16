@@ -12,12 +12,14 @@ from binascii import hexlify
 dir = os.path.dirname(os.path.realpath(__file__))
 FW_PATH = f"{dir}/../../firmware/faxitron.img"
 
-DEBUG = False
+DEBUG = True
 
 class Faxitron:
   DEBUG_EP = 0xA
   DATA_IN_EP = 0x1
   DATA_OUT_EP = 0x1
+  UART_IN_EP = 0x2
+  UART_OUT_EP = 0x2
 
   def __init__(self):
     self.ctx = usb1.USBContext()
@@ -71,8 +73,8 @@ class Faxitron:
         print(f"Debug: Priority: {priority} Thread: {thread} Id: {hex(id)} Log: {log_str}")
 
   def read_data(self, max=None, timeout=50):
+    dat = b""
     try:
-      dat = b""
       last_len = -1
       while last_len != len(dat) and (max is None or len(dat) < max):
         last_len = len(dat)
@@ -80,14 +82,14 @@ class Faxitron:
 
       assert len(dat) % 2 == 0
       DEBUG and print("READ", hexlify(dat, sep=' ', bytes_per_sep=2))
-
-      res = []
-      for i in range(len(dat) // 2):
-        res.append((dat[2*i] & 0xFF) | ((dat[2*i+1] & 0x0F) << 8))
-
-      return res
     except usb1.USBErrorTimeout:
-      return []
+      pass
+
+    res = []
+    for i in range(len(dat) // 2):
+      res.append((dat[2*i] & 0xFF) | ((dat[2*i+1] & 0x0F) << 8))
+
+    return res
 
   def write_data(self, dat):
     assert len(dat) < 128, "TODO: loop over data"
@@ -98,6 +100,26 @@ class Faxitron:
     DEBUG and print("WRITE", hexlify(arr, sep=' ', bytes_per_sep=2))
 
     return self.handle.bulkWrite(Faxitron.DATA_OUT_EP, arr, timeout=100)
+
+  def read_uart(self, max=1024, timeout=50):
+    dat = b""
+    try:
+      last_len = -1
+      while last_len != len(dat) and (max == None or len(dat) < max):
+        last_len = len(dat)
+        dat += self.handle.bulkRead(Faxitron.UART_IN_EP, 32, timeout=timeout)
+
+      # TODO: fix
+      dat = bytes(filter(None, dat))
+      DEBUG and print("READ UART", hexlify(dat, sep=' ', bytes_per_sep=2))
+    except usb1.USBErrorTimeout:
+      pass
+
+    return dat
+
+  def write_uart(self, dat):
+    DEBUG and print(f"WRITE UART: {dat}")
+    return self.handle.bulkWrite(Faxitron.UART_OUT_EP, dat, timeout=100)
 
 
 if __name__ == '__main__':

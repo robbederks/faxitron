@@ -11,18 +11,33 @@
 #include <cyu3pib.h>
 #include <cyu3gpio.h>
 #include <cyu3gpif.h>
+#include <cyu3uart.h>
 #include <pib_regs.h>
+#include <uart_regs.h>
 
 // GPIF design
 #include "gpif/faxitron.cydsn/cyfxgpif2config.h"
 
-CyU3PThread applnThread;               /* Application thread structure */
-static CyU3PDmaChannel glChHandleUtoP; /* DMA Channel handle for U2P transfer. */
-static CyU3PDmaChannel glChHandlePtoU; /* DMA Channel handle for P2U transfer. */
-bool glIsApplnActive = false;          /* Whether the application is active or not. */
+CyU3PThread applnThread;
+static CyU3PDmaChannel glChHandleUtoP;
+static CyU3PDmaChannel glChHandlePtoU;
+static CyU3PDmaChannel glChHandleUartUtoP;
+static CyU3PDmaChannel glChHandleUartPtoU;
+bool glIsApplnActive = false;
+
+CyU3PUartConfig_t glUartConfig = {0};
+volatile uint16_t glPktsPending = 0; // Packets committed since last check
 
 void CyFxAppErrorHandler(CyU3PReturnStatus_t apiRetStatus) {
-  while (true) {}
+  CyU3PDebugPrint(4, "ERROR: %d\n", apiRetStatus);
+  //while (true) {}
+}
+
+void CyFxUSBUARTDmaCallback(CyU3PDmaChannel *chHandle, CyU3PDmaCbType_t type, CyU3PDmaCBInput_t *input) {
+  if (type == CY_U3P_DMA_CB_PROD_EVENT) {
+    CyU3PDmaChannelCommitBuffer(&glChHandleUartPtoU, input->buffer_p.count, 0);
+    glPktsPending++;
+  }
 }
 
 /* This function starts the logger application. This is called
@@ -44,6 +59,8 @@ void CyFxApplnStart(void) {
       size = 512;
       break;
     case CY_U3P_SUPER_SPEED:
+      // Turning low power mode off to avoid USB transfer delays
+      CyU3PUsbLPMDisable ();
       size = 1024;
       break;
     default:
@@ -63,12 +80,17 @@ void CyFxApplnStart(void) {
   CyU3PUsbFlushEp(CY_FX_EP_DEBUG);
   CHECK_API_RET(CyU3PDebugInit(CY_FX_EP_DEBUG_SOCKET, 8));
 
-  // DMA endpoints
+  // DMA endpoints (GPIF)
   epCfg.epType = CY_U3P_USB_EP_BULK;
   CHECK_API_RET(CyU3PSetEpConfig(CY_FX_EP_PRODUCER, &epCfg));
   CHECK_API_RET(CyU3PSetEpConfig(CY_FX_EP_CONSUMER, &epCfg));
 
-  // DMA channels
+  // DMA endpoints (UART)
+  epCfg.epType = CY_U3P_USB_EP_BULK;
+  CHECK_API_RET(CyU3PSetEpConfig(CY_FX_EP_UART_PRODUCER, &epCfg));
+  CHECK_API_RET(CyU3PSetEpConfig(CY_FX_EP_UART_CONSUMER, &epCfg));
+
+  // DMA channels (GPIF)
   dmaCfg.size = size;
   dmaCfg.count = 100;
   dmaCfg.dmaMode = CY_U3P_DMA_MODE_BYTE;
@@ -79,18 +101,30 @@ void CyFxApplnStart(void) {
   dmaCfg.consHeader = 0;
   dmaCfg.prodAvailCount = 0;
 
-  // Setup
   dmaCfg.prodSckId = CY_U3P_UIB_SOCKET_PROD_1;
   dmaCfg.consSckId = CY_U3P_PIB_SOCKET_1;
   CHECK_API_RET(CyU3PDmaChannelCreate(&glChHandleUtoP, CY_U3P_DMA_TYPE_AUTO, &dmaCfg));
-
   dmaCfg.prodSckId = CY_U3P_PIB_SOCKET_0;
   dmaCfg.consSckId = CY_U3P_UIB_SOCKET_CONS_1;
   CHECK_API_RET(CyU3PDmaChannelCreate(&glChHandlePtoU, CY_U3P_DMA_TYPE_AUTO, &dmaCfg));
 
+  // DMA channels (UART)
+  dmaCfg.count = 8;
+  dmaCfg.prodSckId = CY_U3P_UIB_SOCKET_PROD_2;
+  dmaCfg.consSckId = CY_U3P_LPP_SOCKET_UART_CONS;
+  CHECK_API_RET(CyU3PDmaChannelCreate(&glChHandleUartUtoP, CY_U3P_DMA_TYPE_AUTO, &dmaCfg));
+  dmaCfg.size = 32; // Small buffer to decrease pipeline delay
+  dmaCfg.prodSckId = CY_U3P_LPP_SOCKET_UART_PROD;
+  dmaCfg.consSckId = CY_U3P_UIB_SOCKET_CONS_2;
+  dmaCfg.notification = CY_U3P_DMA_CB_PROD_EVENT;
+  dmaCfg.cb = CyFxUSBUARTDmaCallback;
+  CHECK_API_RET(CyU3PDmaChannelCreate(&glChHandleUartPtoU, CY_U3P_DMA_TYPE_MANUAL, &dmaCfg));
+
   // Transfer size
-  CHECK_API_RET(CyU3PDmaChannelSetXfer(&glChHandleUtoP, CY_FX_DMA_TX_SIZE));
+  CHECK_API_RET(CyU3PDmaChannelSetXfer(&glChHandleUtoP, CY_FX_DMA_RX_SIZE));
   CHECK_API_RET(CyU3PDmaChannelSetXfer(&glChHandlePtoU, CY_FX_DMA_TX_SIZE));
+  CHECK_API_RET(CyU3PDmaChannelSetXfer(&glChHandleUartUtoP, CY_FX_DMA_RX_SIZE));
+  CHECK_API_RET(CyU3PDmaChannelSetXfer(&glChHandleUartPtoU, CY_FX_DMA_TX_SIZE));
 
   // Start GPIF state machine
   CHECK_API_RET(CyU3PGpifSMStart(START, ALPHA_START));
@@ -119,10 +153,14 @@ void CyFxApplnStop(
   CyU3PUsbFlushEp(CY_FX_EP_DEBUG);
   CyU3PUsbFlushEp(CY_FX_EP_PRODUCER);
   CyU3PUsbFlushEp(CY_FX_EP_CONSUMER);
+  CyU3PUsbFlushEp(CY_FX_EP_UART_PRODUCER);
+  CyU3PUsbFlushEp(CY_FX_EP_UART_CONSUMER);
 
   // Destroy the channel
   CyU3PDmaChannelDestroy(&glChHandleUtoP);
   CyU3PDmaChannelDestroy(&glChHandlePtoU);
+  CyU3PDmaChannelDestroy(&glChHandleUartUtoP);
+  CyU3PDmaChannelDestroy(&glChHandleUartPtoU);
 
   // Disable endpoints
   CyU3PMemSet((uint8_t *)&epCfg, 0, sizeof(epCfg));
@@ -130,6 +168,8 @@ void CyFxApplnStop(
   CHECK_API_RET(CyU3PSetEpConfig(CY_FX_EP_DEBUG, &epCfg));
   CHECK_API_RET(CyU3PSetEpConfig(CY_FX_EP_PRODUCER, &epCfg));
   CHECK_API_RET(CyU3PSetEpConfig(CY_FX_EP_CONSUMER, &epCfg));
+  CHECK_API_RET(CyU3PSetEpConfig(CY_FX_EP_UART_PRODUCER, &epCfg));
+  CHECK_API_RET(CyU3PSetEpConfig(CY_FX_EP_UART_CONSUMER, &epCfg));
 }
 
 // Callback to handle the USB setup requests.
@@ -313,7 +353,6 @@ void CyFxApplnInit(void) {
   CyU3PPibClock_t pibClock;
   CyU3PGpioClock_t gpioClock;
 
-
   // Init P-port (GPIF)
   pibClock.clkDiv = 25;
   pibClock.clkSrc = CY_U3P_SYS_CLK_BY_16; // 15MHz
@@ -343,6 +382,19 @@ void CyFxApplnInit(void) {
   config_gpio(GPIO_DLB, false, true, true, false);
   config_gpio(GPIO_LED_N, false, true, false, true);
 
+  // Setup UART
+  CHECK_API_RET(CyU3PUartInit());
+
+  CyU3PMemSet((uint8_t *) &glUartConfig, 0, sizeof(glUartConfig));
+  glUartConfig.baudRate = CY_U3P_UART_BAUDRATE_9600;
+  glUartConfig.stopBit = CY_U3P_UART_ONE_STOP_BIT;
+  glUartConfig.parity = CY_U3P_UART_NO_PARITY;
+  glUartConfig.flowCtrl = true;
+  glUartConfig.txEnable = true;
+  glUartConfig.rxEnable = true;
+  glUartConfig.isDma = true;
+  CHECK_API_RET(CyU3PUartSetConfig(&glUartConfig, NULL));
+
   // Start the USB functionality.
   CHECK_API_RET(CyU3PUsbStart());
   CyU3PUsbRegisterSetupCallback(CyFxApplnUSBSetupCB, true);
@@ -366,19 +418,31 @@ void CyFxApplnInit(void) {
 void ApplnThread_Entry(uint32_t input) {
   CyFxApplnInit();
 
-  for (;;) {
-    uint8_t state;
-    CyU3PGpifGetSMState(&state);
-    CyU3PDebugPrint(4, "State: 0x%x", state);
+  uint32_t uart_enable_rx = UART->lpp_uart_config;
+  uint32_t uart_disable_rx = UART->lpp_uart_config & (~(CY_U3P_LPP_UART_RTS | CY_U3P_LPP_UART_RX_ENABLE));
 
+  for (;;) {
     if (glIsApplnActive) {
       CyU3PGpioSetValue(GPIO_LED_N, false);
       CyU3PThreadSleep(100);
       CyU3PGpioSetValue(GPIO_LED_N, true);
+
+      // Check for RX data in the last period. If there is, flush the channel
+      if (glPktsPending > 0) {
+          UART->lpp_uart_config = uart_disable_rx;
+          CyU3PDmaChannelSetWrapUp(&glChHandleUartPtoU);
+          UART->lpp_uart_config = uart_enable_rx;
+      }
+
+      glPktsPending = 0;
+
+
     } else {
       CyU3PGpioSetValue(GPIO_LED_N, true);
     }
     CyU3PThreadSleep(100);
+
+    // TODO: UART DMA wrapup
   }
 }
 
@@ -442,14 +506,17 @@ int main(void) {
   // - 33: TXHALT_N
   // - 34: RESET_N
   // - 35: DLB
-  // - 46-49: UART (TODO)
+  // - 46: UART RTS
+  // - 47: UART CTS
+  // - 48: UART TXD
+  // - 49: UART RXD
   io_cfg.isDQ32Bit = false;
   io_cfg.s0Mode = CY_U3P_SPORT_INACTIVE;
   io_cfg.s1Mode = CY_U3P_SPORT_INACTIVE;
-  io_cfg.useUart = false;
+  io_cfg.useUart = true; // I2S and SPI also need to be active to map UART to the right pins
   io_cfg.useI2C = false;
-  io_cfg.useI2S = false;
-  io_cfg.useSpi = false;
+  io_cfg.useI2S = true;
+  io_cfg.useSpi = true;
   io_cfg.lppMode = CY_U3P_IO_MATRIX_LPP_DEFAULT;
   io_cfg.gpioSimpleEn[0] = 0;
   io_cfg.gpioSimpleEn[1] = (1 << 1) | (1 << 2) | (1 << 3) | (1 << 4);

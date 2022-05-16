@@ -30,6 +30,9 @@
 #define CY_FX_EP_PRODUCER 0x01 // Endpoint 1-OUT.
 #define CY_FX_EP_CONSUMER 0x81 // Endpoint 1-IN.
 
+#define CY_FX_EP_UART_PRODUCER 0x02 // Endpoint 2-OUT.
+#define CY_FX_EP_UART_CONSUMER 0x82 // Endpoint 2-IN.
+
 #define CY_FX_EP_DEBUG 0x8A    /* EP 10 IN */
 #define CY_FX_EP_DEBUG_SOCKET CY_U3P_UIB_SOCKET_CONS_10 // Needs to match the endpoint
 
