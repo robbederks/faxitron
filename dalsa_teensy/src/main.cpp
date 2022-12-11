@@ -120,6 +120,10 @@ bool start_readout(){
 }
 
 void setup() {
+  // Setup Serial
+  Serial.begin(115200);
+
+  // LEDs
   pinMode(PIN_LED_TEENSY, OUTPUT);
   pinMode(PIN_LED0, OUTPUT);
   pinMode(PIN_LED1, OUTPUT);

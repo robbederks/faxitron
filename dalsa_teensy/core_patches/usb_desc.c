@@ -468,14 +468,14 @@
     // endpoint descriptor, USB spec 9.6.6, page 269-271, Table 9-13
     7,                                      // bLength
     5,                                      // bDescriptorType
-    1 | 0x80,                               // bEndpointAddress
-    0x00,                                   // bmAttributes (0x00=control)
+    DALSA_RX_ENDPOINT,                      // bEndpointAddress
+    0x02,                                   // bmAttributes (0x00=bulk)
     LSB(64), MSB(64),                       // wMaxPacketSize
     1,                                      // bInterval
     // endpoint descriptor, USB spec 9.6.6, page 269-271, Table 9-13
     7,                                      // bLength
     5,                                      // bDescriptorType
-    1,                                      // bEndpointAddress
+    DALSA_TX_ENDPOINT | 0x80,               // bEndpointAddress
     0x02,                                   // bmAttributes (0x02=bulk)
     LSB(512), MSB(512),                     // wMaxPacketSize
     1,                                      // bInterval
@@ -740,14 +740,14 @@
     // endpoint descriptor, USB spec 9.6.6, page 269-271, Table 9-13
     7,                                      // bLength
     5,                                      // bDescriptorType
-    1 | 0x80,                               // bEndpointAddress
-    0x00,                                   // bmAttributes (0x00=control)
+    DALSA_RX_ENDPOINT,                      // bEndpointAddress
+    0x02,                                   // bmAttributes (0x02=bulk)
     LSB(64), MSB(64),                       // wMaxPacketSize
     1,                                      // bInterval
     // endpoint descriptor, USB spec 9.6.6, page 269-271, Table 9-13
     7,                                      // bLength
     5,                                      // bDescriptorType
-    1,                                      // bEndpointAddress
+    DALSA_TX_ENDPOINT | 0x80,               // bEndpointAddress
     0x02,                                   // bmAttributes (0x02=bulk)
     LSB(64), MSB(64),                       // wMaxPacketSize
     1,                                      // bInterval
