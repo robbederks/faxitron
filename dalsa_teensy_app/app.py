@@ -40,8 +40,8 @@ if __name__ == "__main__":
   dalsa_teensy = DalsaTeensy()
 
   st = time.monotonic()
-  for _ in range(2000):
-    # dalsa_teensy.send_control_out(b"A"*64)
-    # print()
-    dalsa_teensy.read_bulk(512)
+  for _ in range(1000):
+    dalsa_teensy.send_control_out(b"A"*64)
+    ret = dalsa_teensy.read_bulk(512)
+    # print(ret, len(ret))
   print(time.monotonic() - st)

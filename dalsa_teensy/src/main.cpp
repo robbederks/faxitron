@@ -1,5 +1,6 @@
 #include <Arduino.h>
 #include <ADC.h>
+#include <usb_dalsa.h>
 
 // Pin definitions
 #define PIN_DRV_PH_V1 0
@@ -119,6 +120,10 @@ bool start_readout(){
   return true;
 }
 
+uint32_t usb_handler(uint8_t *control_data, uint32_t len, uint8_t *return_data, uint32_t max_return_len) {
+  return 0;
+}
+
 void setup() {
   // Setup Serial
   Serial.begin(115200);
@@ -136,6 +141,8 @@ void setup() {
   pinMode(PIN_DRV_PH_H1, OUTPUT);
   pinMode(PIN_DRV_PH_H2, OUTPUT);
   pinMode(PIN_DRV_PH_R, OUTPUT);
+
+  usb_dalsa_set_handler(NULL);
 
   // Start readout
   start_readout();
