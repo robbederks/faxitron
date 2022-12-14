@@ -40,11 +40,12 @@
 ADC *adc = new ADC();
 bool pin_state = false;
 
-typedef struct {
-  uint row;
-  uint col;
-  bool busy;
+typedef struct __attribute__((__packed__)) {
+  uint32_t row;
+  uint32_t col;
   uint8_t readout_pin;
+  bool busy;
+  bool done;
 } readout_state;
 readout_state state;
 
@@ -76,6 +77,7 @@ void adc_irq() {
 
     if (state.row >= SENSOR_ROWS) {
       state.busy = false; // We're done!
+      state.done = true;
     }
   }
 
@@ -97,6 +99,7 @@ bool start_readout(){
   state.row = 0;
   state.col = 0;
   state.busy = true;
+  state.done = false;
   state.readout_pin = PIN_P1_VOUT1;
 
   // Initialize phases
@@ -120,8 +123,40 @@ bool start_readout(){
   return true;
 }
 
+typedef struct __attribute__((__packed__)) {
+  uint8_t command;
+  uint32_t data_len;
+  uint8_t data[64 - 5];
+} control_req_t;
+
 uint32_t usb_handler(uint8_t *control_data, uint32_t len, uint8_t *return_data, uint32_t max_return_len) {
-  return 0;
+  uint32_t return_len = 0;
+  control_req_t *req = (control_req_t *)control_data;
+  if (len < 5) {
+    Serial.write("Invalid command with len %d\n", len);
+    return_len = 0;
+    goto end;
+  }
+
+  switch (req->command) {
+    case 0x00: // Ping
+      Serial.write("Ping!\n");
+      return_data[0] = 0xA5;
+      return_len = 1;
+      break;
+    case 0x01: // Check state
+      memcpy(return_data, &state, sizeof(state));
+      return_len = sizeof(state);
+      break;
+
+    default:
+      Serial.write("Invalid command %d\n", req->command);
+      return_len = 0;
+      break;
+  }
+
+end:
+  return return_len;
 }
 
 void setup() {
@@ -142,7 +177,7 @@ void setup() {
   pinMode(PIN_DRV_PH_H2, OUTPUT);
   pinMode(PIN_DRV_PH_R, OUTPUT);
 
-  usb_dalsa_set_handler(NULL);
+  usb_dalsa_set_handler(usb_handler);
 
   // Start readout
   start_readout();

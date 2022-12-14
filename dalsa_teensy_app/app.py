@@ -2,12 +2,15 @@
 
 import usb1
 import time
+import struct
 
 
 class DalsaTeensy:
   DALSA_INTERFACE = 2
   CONTROL_OUT_ENDPOINT = 5
   BULK_IN_ENDPOINT = 6
+
+  STRUCT_STATE = struct.Struct("<IIB??")
 
   def __init__(self):
     self._handle = None
@@ -24,24 +27,51 @@ class DalsaTeensy:
 
     print("Connected to Dalsa Teensy")
 
-  def send_control_out(self, data):
+  def _control_out(self, data):
     return self._handle.bulkWrite(
       endpoint=DalsaTeensy.CONTROL_OUT_ENDPOINT,
       data=data,
     )
 
-  def read_bulk(self, size):
+  def _bulk_in(self, size):
     return self._handle.bulkRead(
       endpoint=DalsaTeensy.BULK_IN_ENDPOINT,
       length=size,
     )
 
+  def _command(self, cmd, data):
+    self._control_out(struct.pack("<BI", cmd, len(data)) + data)
+    resp = self._bulk_in(512)
+    if len(resp) < 4:
+      raise Exception("Invalid response length")
+    resp_len = struct.unpack("<I", resp[:4])[0]
+    print(resp_len)
+    resp = resp[4:]
+    while len(resp) < resp_len:
+      resp += self._bulk_in(resp_len - len(resp))
+    return resp
+
+  def ping(self):
+    dat = self._command(0x00, b"")
+    print(dat)
+
+  def get_state(self):
+    dat = self._command(0x01, b"")
+    assert len(dat) == self.STRUCT_STATE.size, "Response does not match expected struct size"
+    dat_unpacked = self.STRUCT_STATE.unpack(dat)
+    return {
+      'row': dat_unpacked[0],
+      'col': dat_unpacked[1],
+      'readout_pin': dat_unpacked[2],
+      'busy': dat_unpacked[3],
+      'done': dat_unpacked[4],
+    }
+
 if __name__ == "__main__":
   dalsa_teensy = DalsaTeensy()
 
   st = time.monotonic()
-  for _ in range(1000):
-    dalsa_teensy.send_control_out(b"A"*64)
-    ret = dalsa_teensy.read_bulk(512)
-    # print(ret, len(ret))
+  for _ in range(10):
+    dalsa_teensy.ping()
+    print(dalsa_teensy.get_state())
   print(time.monotonic() - st)

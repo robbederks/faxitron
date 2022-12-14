@@ -29,11 +29,12 @@ static void rx_event(transfer_t *t) {
 
   uint32_t return_len = 0;
   if(control_handler != NULL) {
-    return_len = control_handler(rx_buffer[i], len, return_data, tx_packet_size);
-    if (return_len > tx_packet_size) {
+    return_len = control_handler(rx_buffer[i], len, &return_data[4], tx_packet_size - 4);
+    if (return_len > tx_packet_size - 4) {
       printf("return_len > tx_packet_size\n");
-      return_len = tx_packet_size;
+      return_len = tx_packet_size - 4;
     }
+    *((uint32_t *) return_data) = return_len;
   } else {
     return_data[0] = 0x00;
     return_len = 1;
@@ -42,8 +43,8 @@ static void rx_event(transfer_t *t) {
 
   // queue response transfer
   NVIC_DISABLE_IRQ(IRQ_USB1);
-  usb_prepare_transfer(&tx_transfer[i], return_data, return_len, 0);
-  arm_dcache_flush_delete(return_data, return_len);
+  usb_prepare_transfer(&tx_transfer[i], return_data, return_len + 4, 0);
+  arm_dcache_flush_delete(return_data, return_len + 4);
   usb_transmit(DALSA_TX_ENDPOINT, &tx_transfer[i]);
   NVIC_ENABLE_IRQ(IRQ_USB1);
 
