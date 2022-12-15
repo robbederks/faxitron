@@ -57,11 +57,11 @@ void usb_dalsa_set_handler(uint32_t (*handler)(uint8_t *control_data, uint32_t l
   control_handler = handler;
 }
 
-static transfer_t bulk_transfer[RX_NUM] __attribute__ ((used, aligned(32)));
+static transfer_t bulk_transfer __attribute__ ((used, aligned(32)));
 static uint8_t *bulk_data __attribute__ ((aligned(32))) = NULL;
 static uint32_t bulk_len_remaining = 0;
 
-void usb_dalsa_init_bulk_transfer(uint8_t *buffer, uint32_t len, uint8_t transfer_id) {
+void usb_dalsa_init_bulk_transfer(uint8_t *buffer, uint32_t len) {
   bulk_data = buffer;
   bulk_len_remaining = len;
 
@@ -73,9 +73,9 @@ void usb_dalsa_init_bulk_transfer(uint8_t *buffer, uint32_t len, uint8_t transfe
   NVIC_DISABLE_IRQ(IRQ_USB1);
   uint32_t transfer_len = bulk_len_remaining > tx_packet_size ? tx_packet_size : bulk_len_remaining;
 
-  usb_prepare_transfer(&bulk_transfer[transfer_id], bulk_data, transfer_len, 0);
+  usb_prepare_transfer(&bulk_transfer, bulk_data, transfer_len, 0);
   arm_dcache_flush_delete(return_data, transfer_len);
-  usb_transmit(DALSA_BULK_ENDPOINT, &bulk_transfer[transfer_id]);
+  usb_transmit(DALSA_BULK_ENDPOINT, &bulk_transfer);
   NVIC_ENABLE_IRQ(IRQ_USB1);
 
   // update state
@@ -85,7 +85,7 @@ void usb_dalsa_init_bulk_transfer(uint8_t *buffer, uint32_t len, uint8_t transfe
 
 static void bulk_event(transfer_t *t) {
   // queue next transfer
-  usb_dalsa_init_bulk_transfer(bulk_data, bulk_len_remaining, t->callback_param);
+  usb_dalsa_init_bulk_transfer(bulk_data, bulk_len_remaining);
 }
 
 void usb_dalsa_configure (void) {

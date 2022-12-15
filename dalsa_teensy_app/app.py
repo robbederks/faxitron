@@ -4,6 +4,8 @@ import usb1
 import time
 import struct
 
+import numpy as np
+import matplotlib.pyplot as plt
 
 class DalsaTeensy:
   DALSA_INTERFACE = 2
@@ -52,7 +54,6 @@ class DalsaTeensy:
     if len(resp) < 4:
       raise Exception("Invalid response length", len(resp))
     resp_len = struct.unpack("<I", resp[:4])[0]
-    print(resp_len)
     resp = resp[4:]
     while len(resp) < resp_len:
       resp += self._control_in(resp_len - len(resp))
@@ -60,7 +61,8 @@ class DalsaTeensy:
 
   def ping(self):
     dat = self._command(0x00, b"")
-    print(dat)
+    assert len(dat) == 1, "Response does not match expected size"
+    assert dat[0] == 0xA5, "Invalid ping response"
 
   def get_state(self):
     dat = self._command(0x01, b"")
@@ -80,14 +82,34 @@ class DalsaTeensy:
     frame_len = struct.unpack("<I", dat[:4])[0]
     return self._bulk_in(frame_len)
 
+  def start_readout(self):
+    dat = self._command(0x03, b"")
+    assert len(dat) == 1, "Response does not match expected size"
+    if dat[0] != 0:
+      raise Exception("Failed to start readout, is another readout in progress?")
+
 if __name__ == "__main__":
   dalsa_teensy = DalsaTeensy()
+  dalsa_teensy.ping()
 
   st = time.monotonic()
-  for _ in range(10):
-    dalsa_teensy.ping()
-    print(dalsa_teensy.get_state())
+  dalsa_teensy.start_readout()
+  print("Started readout")
 
-    print(len(dalsa_teensy.get_frame()))
+  done = False
+  while not done:
+    time.sleep(0.1)
+    state = dalsa_teensy.get_state()
+    done = state['done']
+  print(f"Readout done in {time.monotonic() - st:.2f}s")
 
-  print(time.monotonic() - st)
+  frame = dalsa_teensy.get_frame()
+  assert len(frame) == 2150688, "Frame does not match expected size"
+
+  frame = np.frombuffer(frame, dtype=np.uint16)
+  frame = frame.reshape((1024 + 8, 1024 + 18))
+
+  plt.imshow(frame, cmap='gray')
+  # plt.hist(frame.flatten())
+  plt.show()
+

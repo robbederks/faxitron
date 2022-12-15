@@ -156,6 +156,10 @@ uint32_t usb_handler(uint8_t *control_data, uint32_t len, uint8_t *return_data, 
       *((uint32_t *)return_data) = sizeof(pixel_buffer);
       return_len = sizeof(uint32_t);
       break;
+    case 0x03: // Start readout
+      return_data[0] = start_readout() ? 0x00 : 0xFF;
+      return_len = 1;
+      break;
 
     default:
       Serial.write("Invalid command %d\n", req->command);
@@ -192,6 +196,4 @@ void setup() {
 }
 
 void loop() {
-  start_readout();
-  delay(2000);
 }
