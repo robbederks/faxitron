@@ -2,12 +2,13 @@
 #include "usb_serial.h"
 #include "debug/printf.h"
 #include "avr/pgmspace.h" // for PROGMEM, DMAMEM, FASTRUN
+#include <string.h>
 
 #define RX_NUM  8
 #define DALSA_RX_SIZE 64
 
 static uint16_t tx_packet_size = 0;
-static transfer_t tx_transfer[RX_NUM];
+static transfer_t tx_transfer[RX_NUM] __attribute__ ((used, aligned(32)));
 static transfer_t rx_transfer[RX_NUM] __attribute__ ((used, aligned(32)));
 DMAMEM static uint8_t rx_buffer[RX_NUM][DALSA_RX_SIZE] __attribute__ ((aligned(32)));
 extern volatile uint8_t usb_high_speed;
@@ -22,7 +23,7 @@ static void rx_queue_transfer(int i) {
 	NVIC_ENABLE_IRQ(IRQ_USB1);
 }
 
-uint8_t return_data[512];
+DMAMEM static uint8_t return_data[512] __attribute__ ((aligned(32)));
 static void rx_event(transfer_t *t) {
 	int len = DALSA_RX_SIZE - ((t->status >> 16) & 0x7FFF);
 	int i = t->callback_param;
@@ -34,7 +35,7 @@ static void rx_event(transfer_t *t) {
       printf("return_len > tx_packet_size\n");
       return_len = tx_packet_size - 4;
     }
-    *((uint32_t *) return_data) = return_len;
+    memcpy(return_data, &return_len, sizeof(uint32_t));
   } else {
     return_data[0] = 0x00;
     return_len = 1;
@@ -56,11 +57,43 @@ void usb_dalsa_set_handler(uint32_t (*handler)(uint8_t *control_data, uint32_t l
   control_handler = handler;
 }
 
+static transfer_t bulk_transfer[RX_NUM] __attribute__ ((used, aligned(32)));
+static uint8_t *bulk_data __attribute__ ((aligned(32))) = NULL;
+static uint32_t bulk_len_remaining = 0;
+
+void usb_dalsa_init_bulk_transfer(uint8_t *buffer, uint32_t len, uint8_t transfer_id) {
+  bulk_data = buffer;
+  bulk_len_remaining = len;
+
+  if (buffer == NULL || len == 0) {
+    return;
+  }
+
+  // queue transfer
+  NVIC_DISABLE_IRQ(IRQ_USB1);
+  uint32_t transfer_len = bulk_len_remaining > tx_packet_size ? tx_packet_size : bulk_len_remaining;
+
+  usb_prepare_transfer(&bulk_transfer[transfer_id], bulk_data, transfer_len, 0);
+  arm_dcache_flush_delete(return_data, transfer_len);
+  usb_transmit(DALSA_BULK_ENDPOINT, &bulk_transfer[transfer_id]);
+  NVIC_ENABLE_IRQ(IRQ_USB1);
+
+  // update state
+  bulk_data += transfer_len;
+  bulk_len_remaining -= transfer_len;
+}
+
+static void bulk_event(transfer_t *t) {
+  // queue next transfer
+  usb_dalsa_init_bulk_transfer(bulk_data, bulk_len_remaining, t->callback_param);
+}
+
 void usb_dalsa_configure (void) {
   tx_packet_size = usb_high_speed ? 512 : 64;
 
   usb_config_rx(DALSA_RX_ENDPOINT, DALSA_RX_SIZE, 0, rx_event);
   usb_config_tx(DALSA_TX_ENDPOINT, tx_packet_size, 0, NULL);
+  usb_config_tx(DALSA_BULK_ENDPOINT, tx_packet_size, 0, bulk_event);
 
   // init some rx transfers
   for (int i=0; i < RX_NUM; i++) rx_queue_transfer(i);

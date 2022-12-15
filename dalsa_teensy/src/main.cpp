@@ -148,6 +148,14 @@ uint32_t usb_handler(uint8_t *control_data, uint32_t len, uint8_t *return_data, 
       memcpy(return_data, &state, sizeof(state));
       return_len = sizeof(state);
       break;
+    case 0x02: // Get pixel buffer
+      // setup bulk transfer
+      usb_dalsa_init_bulk_transfer((uint8_t *) pixel_buffer, sizeof(pixel_buffer), 0);
+
+      // return the size of the buffer
+      *((uint32_t *)return_data) = sizeof(pixel_buffer);
+      return_len = sizeof(uint32_t);
+      break;
 
     default:
       Serial.write("Invalid command %d\n", req->command);

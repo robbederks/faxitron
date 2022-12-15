@@ -195,7 +195,7 @@
 
   #define DALSA_INTERFACE_DESC_POS	CDC3_DATA_INTERFACE_DESC_POS + CDC3_DATA_INTERFACE_DESC_SIZE
   #ifdef  DALSA_INTERFACE
-  #define DALSA_INTERFACE_DESC_SIZE 9+7+7
+  #define DALSA_INTERFACE_DESC_SIZE 9+7+7+7
   #define DALSA_INTERFACE_DESC_OFFSET	CDC3_DATA_INTERFACE_DESC_POS+9
   #else
   #define DALSA_INTERFACE_DESC_SIZE 0
@@ -460,7 +460,7 @@
     4,                                      // bDescriptorType
     DALSA_INTERFACE,                        // bInterfaceNumber
     0,                                      // bAlternateSetting
-    2,                                      // bNumEndpoints
+    3,                                      // bNumEndpoints
     0xFF,                                   // bInterfaceClass (0xFF = Vendor)
     0x6A,                                   // bInterfaceSubClass
     0xFF,                                   // bInterfaceProtocol
@@ -476,6 +476,13 @@
     7,                                      // bLength
     5,                                      // bDescriptorType
     DALSA_TX_ENDPOINT | 0x80,               // bEndpointAddress
+    0x02,                                   // bmAttributes (0x02=bulk)
+    LSB(512), MSB(512),                     // wMaxPacketSize
+    1,                                      // bInterval
+    // endpoint descriptor, USB spec 9.6.6, page 269-271, Table 9-13
+    7,                                      // bLength
+    5,                                      // bDescriptorType
+    DALSA_BULK_ENDPOINT | 0x80,             // bEndpointAddress
     0x02,                                   // bmAttributes (0x02=bulk)
     LSB(512), MSB(512),                     // wMaxPacketSize
     1,                                      // bInterval
@@ -732,7 +739,7 @@
     4,                                      // bDescriptorType
     DALSA_INTERFACE,                        // bInterfaceNumber
     0,                                      // bAlternateSetting
-    2,                                      // bNumEndpoints
+    3,                                      // bNumEndpoints
     0xFF,                                   // bInterfaceClass (0xFF = Vendor)
     0x6A,                                   // bInterfaceSubClass
     0xFF,                                   // bInterfaceProtocol
@@ -748,6 +755,13 @@
     7,                                      // bLength
     5,                                      // bDescriptorType
     DALSA_TX_ENDPOINT | 0x80,               // bEndpointAddress
+    0x02,                                   // bmAttributes (0x02=bulk)
+    LSB(64), MSB(64),                       // wMaxPacketSize
+    1,                                      // bInterval
+    // endpoint descriptor, USB spec 9.6.6, page 269-271, Table 9-13
+    7,                                      // bLength
+    5,                                      // bDescriptorType
+    DALSA_BULK_ENDPOINT | 0x80,             // bEndpointAddress
     0x02,                                   // bmAttributes (0x02=bulk)
     LSB(64), MSB(64),                       // wMaxPacketSize
     1,                                      // bInterval
