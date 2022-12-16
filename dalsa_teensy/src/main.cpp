@@ -78,11 +78,19 @@ void adc_irq() {
     if (state.row >= SENSOR_ROWS) {
       state.busy = false; // We're done!
       state.done = true;
+      arm_dcache_flush_delete(pixel_buffer, sizeof(pixel_buffer));
     }
   }
 
-  // Do some clocking
+  // Clock next pixel
+  PHASE_H(true);
+  delayNanoseconds(60);
+  PHASE_H(false);
 
+  // Reset
+  PHASE_R(true);
+  delayNanoseconds(60);
+  PHASE_R(false);
 
   if (state.busy) {
     // Start next read
@@ -90,7 +98,7 @@ void adc_irq() {
   }
 }
 
-bool start_readout(){
+bool start_readout(bool high_gain){
   if (state.busy) {
     return false;
   }
@@ -100,12 +108,16 @@ bool start_readout(){
   state.col = 0;
   state.busy = true;
   state.done = false;
-  state.readout_pin = PIN_P1_VOUT1;
+  state.readout_pin = high_gain ? PIN_P1_VOUT1 : PIN_P1_VOUT2;
 
   // Initialize phases
   PHASE_V(false, false);
   PHASE_H(false);
   PHASE_R(false);
+
+  // Setup analog path
+  digitalWrite(PIN_DRV_SW_PH_H21, high_gain);
+  digitalWrite(PIN_DRV_SW_PH_H22, !high_gain);
 
   // Setup read ADC
   adc->adc0->enableInterrupts(adc_irq);
@@ -157,7 +169,7 @@ uint32_t usb_handler(uint8_t *control_data, uint32_t len, uint8_t *return_data, 
       return_len = sizeof(uint32_t);
       break;
     case 0x03: // Start readout
-      return_data[0] = start_readout() ? 0x00 : 0xFF;
+      return_data[0] = start_readout((req->data[0] != 0)) ? 0x00 : 0xFF;
       return_len = 1;
       break;
 
@@ -189,10 +201,12 @@ void setup() {
   pinMode(PIN_DRV_PH_H2, OUTPUT);
   pinMode(PIN_DRV_PH_R, OUTPUT);
 
-  usb_dalsa_set_handler(usb_handler);
+  // Sensor readout config
+  pinMode(PIN_DRV_SW_PH_H21, OUTPUT);
+  pinMode(PIN_DRV_SW_PH_H22, OUTPUT);
 
-  // Start readout
-  start_readout();
+  // USB handler
+  usb_dalsa_set_handler(usb_handler);
 }
 
 void loop() {

@@ -82,8 +82,8 @@ class DalsaTeensy:
     frame_len = struct.unpack("<I", dat[:4])[0]
     return self._bulk_in(frame_len)
 
-  def start_readout(self):
-    dat = self._command(0x03, b"")
+  def start_readout(self, high_gain=False):
+    dat = self._command(0x03, b"\x01" if high_gain else b"\x00")
     assert len(dat) == 1, "Response does not match expected size"
     if dat[0] != 0:
       raise Exception("Failed to start readout, is another readout in progress?")
@@ -92,24 +92,25 @@ if __name__ == "__main__":
   dalsa_teensy = DalsaTeensy()
   dalsa_teensy.ping()
 
-  st = time.monotonic()
-  dalsa_teensy.start_readout()
-  print("Started readout")
+  for hg in [False, True]:
+    st = time.monotonic()
+    dalsa_teensy.start_readout(hg)
+    print("Started readout")
 
-  done = False
-  while not done:
-    time.sleep(0.1)
-    state = dalsa_teensy.get_state()
-    done = state['done']
-  print(f"Readout done in {time.monotonic() - st:.2f}s")
+    done = False
+    while not done:
+      time.sleep(0.1)
+      state = dalsa_teensy.get_state()
+      done = state['done']
+    print(f"Readout done in {time.monotonic() - st:.2f}s")
 
-  frame = dalsa_teensy.get_frame()
-  assert len(frame) == 2150688, "Frame does not match expected size"
+    frame = dalsa_teensy.get_frame()
+    assert len(frame) == 2150688, "Frame does not match expected size"
 
-  frame = np.frombuffer(frame, dtype=np.uint16)
-  frame = frame.reshape((1024 + 8, 1024 + 18))
+    frame = np.frombuffer(frame, dtype=np.uint16)
+    frame = frame.reshape((1024 + 8, 1024 + 18))
 
-  plt.imshow(frame, cmap='gray')
-  # plt.hist(frame.flatten())
-  plt.show()
+    plt.imshow(frame, cmap='gray')
+    # plt.hist(frame.flatten())
+    plt.show()
 
