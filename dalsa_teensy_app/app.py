@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import sys
 import usb1
 import time
 import struct
@@ -92,9 +93,12 @@ if __name__ == "__main__":
   dalsa_teensy = DalsaTeensy()
   dalsa_teensy.ping()
 
-  for hg in [False, True]:
+  # for hg in [False, True]:
+  img = None
+  plt.figure()
+  while True:
     st = time.monotonic()
-    dalsa_teensy.start_readout(hg)
+    dalsa_teensy.start_readout(True)
     print("Started readout")
 
     done = False
@@ -110,7 +114,13 @@ if __name__ == "__main__":
     frame = np.frombuffer(frame, dtype=np.uint16)
     frame = frame.reshape((1024 + 8, 1024 + 18))
 
-    plt.imshow(frame, cmap='gray')
-    # plt.hist(frame.flatten())
-    plt.show()
+    if img is None:
+      img = plt.imshow(np.max(frame) - frame, cmap='gray')
+    else:
+      img.set_data(np.max(frame) - frame)
+    plt.draw()
+    plt.pause(5)
 
+    if len(sys.argv) > 1:
+      plt.show()
+      break

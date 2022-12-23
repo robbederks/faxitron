@@ -34,8 +34,10 @@
 
 // Macros
 #define PHASE_V(state1, state2) {digitalWrite(PIN_DRV_PH_V1, state1); digitalWrite(PIN_DRV_PH_V2, state2);}
-#define PHASE_H(state) {digitalWrite(PIN_DRV_PH_H1, state); digitalWrite(PIN_DRV_PH_H2, !state);}
+#define PHASE_H(state1, state2) {digitalWrite(PIN_DRV_PH_H1, state1); digitalWrite(PIN_DRV_PH_H2, state2);}
 #define PHASE_R(state) {digitalWrite(PIN_DRV_PH_R, state);}
+
+#define SLOWDOWN 1
 
 ADC *adc = new ADC();
 bool pin_state = false;
@@ -52,15 +54,15 @@ readout_state state;
 EXTMEM uint16_t pixel_buffer[SENSOR_ROWS][SENSOR_COLUMNS]; // External RAM is neccesary to fit the buffer
 
 void next_row() {
-  delayMicroseconds(1);
+  delayMicroseconds(5 * SLOWDOWN);
   PHASE_V(true, false);
-  delayMicroseconds(5);
+  delayMicroseconds(20 * SLOWDOWN);
   PHASE_V(false, true);
-  delayMicroseconds(5);
+  delayMicroseconds(20 * SLOWDOWN);
   PHASE_V(true, false);
-  delayMicroseconds(5);
+  delayMicroseconds(20 * SLOWDOWN);
   PHASE_V(false, false);
-  delayMicroseconds(1);
+  delayMicroseconds(5 * SLOWDOWN);
 }
 
 void adc_irq() {
@@ -79,18 +81,28 @@ void adc_irq() {
       state.busy = false; // We're done!
       state.done = true;
       arm_dcache_flush_delete(pixel_buffer, sizeof(pixel_buffer));
+
+      digitalWrite(PIN_LED0, LOW);
+
+      // Reset phases
+      PHASE_V(false, false);
+      PHASE_H(false, false);
+      PHASE_R(false);
     }
   }
 
   // Clock next pixel
-  PHASE_H(true);
-  delayNanoseconds(60);
-  PHASE_H(false);
+  PHASE_H(false, true);
 
   // Reset
   PHASE_R(true);
-  delayNanoseconds(60);
+  delayNanoseconds(150 * SLOWDOWN);
   PHASE_R(false);
+  delayNanoseconds(150 * SLOWDOWN);
+
+  // Next pixel (part 2)
+  PHASE_H(true, false);
+  delayNanoseconds(250 * SLOWDOWN);
 
   if (state.busy) {
     // Start next read
@@ -103,6 +115,9 @@ bool start_readout(bool high_gain){
     return false;
   }
 
+  // Enable LED
+  digitalWrite(PIN_LED0, HIGH);
+
   // Setup state
   state.row = 0;
   state.col = 0;
@@ -112,7 +127,7 @@ bool start_readout(bool high_gain){
 
   // Initialize phases
   PHASE_V(false, false);
-  PHASE_H(false);
+  PHASE_H(true, false);
   PHASE_R(false);
 
   // Setup analog path
@@ -207,7 +222,13 @@ void setup() {
 
   // USB handler
   usb_dalsa_set_handler(usb_handler);
+
+  PHASE_H(false, false);
 }
 
 void loop() {
+  // if(state.busy == false) {
+  //   start_readout(true);
+  // }
+  // delay(100);
 }
