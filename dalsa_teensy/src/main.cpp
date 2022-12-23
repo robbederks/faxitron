@@ -34,10 +34,14 @@
 
 // Macros
 #define PHASE_V(state1, state2) {digitalWrite(PIN_DRV_PH_V1, state1); digitalWrite(PIN_DRV_PH_V2, state2);}
-#define PHASE_H(state1, state2) {digitalWrite(PIN_DRV_PH_H1, state1); digitalWrite(PIN_DRV_PH_H2, state2);}
+#define PHASE_H(state) {digitalWrite(PIN_DRV_PH_H1, state); digitalWrite(PIN_DRV_PH_H2, !state);}
 #define PHASE_R(state) {digitalWrite(PIN_DRV_PH_R, state);}
 
-#define SLOWDOWN 1
+#define T_HALF_PIXEL_US 1
+#define T_PH_V_PRE_US 5
+#define T_PH_V_PULSE_US 20
+#define T_PH_V_POST_US 5
+#define T_PH_H_TOTAL_US (T_PH_V_PRE_US + 3 * T_PH_V_PULSE_US + T_PH_V_POST_US)
 
 ADC *adc = new ADC();
 bool pin_state = false;
@@ -45,69 +49,85 @@ bool pin_state = false;
 typedef struct __attribute__((__packed__)) {
   uint32_t row;
   uint32_t col;
+  uint32_t ph_v_counter;
   uint8_t readout_pin;
   bool busy;
   bool done;
+  bool rising_edge;
 } readout_state;
-readout_state state;
+volatile readout_state state;
 
 EXTMEM uint16_t pixel_buffer[SENSOR_ROWS][SENSOR_COLUMNS]; // External RAM is neccesary to fit the buffer
 
-void next_row() {
-  delayMicroseconds(5 * SLOWDOWN);
-  PHASE_V(true, false);
-  delayMicroseconds(20 * SLOWDOWN);
-  PHASE_V(false, true);
-  delayMicroseconds(20 * SLOWDOWN);
-  PHASE_V(true, false);
-  delayMicroseconds(20 * SLOWDOWN);
-  PHASE_V(false, false);
-  delayMicroseconds(5 * SLOWDOWN);
-}
+IntervalTimer pixelTimer;
 
-void adc_irq() {
-  // Read pixel value
-  pixel_buffer[state.row][state.col] = adc->adc0->readSingle();
+void pixel_irq(){
+  if (state.rising_edge) {
+    if (state.busy) {
+      if(state.ph_v_counter > 0) {
+        // Vertical phase (rows)
+        uint32_t v_t_us = (T_PH_H_TOTAL_US - state.ph_v_counter * T_HALF_PIXEL_US);
+        if(v_t_us < T_PH_V_PRE_US) {
+          PHASE_V(false, false);
+        } else if(v_t_us < T_PH_V_PRE_US + T_PH_V_PULSE_US) {
+          PHASE_V(true, false);
+        } else if(v_t_us < T_PH_V_PRE_US + 2 * T_PH_V_PULSE_US) {
+          PHASE_V(false, true);
+        } else if(v_t_us < T_PH_V_PRE_US + 3 * T_PH_V_PULSE_US) {
+          PHASE_V(true, false);
+        } else {
+          PHASE_V(false, false);
+        }
+        state.ph_v_counter--;
+      } else {
+        // Horizontal phase (columns)
+        PHASE_H(true);
+        delayNanoseconds(250);
 
-  // Next pixel!
-  state.col++;
-  if (state.col >= SENSOR_COLUMNS) {
-    state.col = 0;
-    state.row++;
+        // Start next read
+        adc->adc0->startSingleRead(state.readout_pin);
 
-    next_row();
+        // Atomically read pixel value
+        noInterrupts();
+        while (!adc->adc0->isComplete());
+        pixel_buffer[state.row][state.col] = adc->adc0->readSingle();
+        interrupts();
 
-    if (state.row >= SENSOR_ROWS) {
-      state.busy = false; // We're done!
-      state.done = true;
-      arm_dcache_flush_delete(pixel_buffer, sizeof(pixel_buffer));
+        // Next pixel!
+        state.col++;
+        if (state.col >= SENSOR_COLUMNS) {
+          state.col = 0;
+          state.row++;
 
-      digitalWrite(PIN_LED0, LOW);
+          // Next row!
+          state.ph_v_counter = T_PH_H_TOTAL_US;
 
-      // Reset phases
-      PHASE_V(false, false);
-      PHASE_H(false, false);
-      PHASE_R(false);
+          if (state.row >= SENSOR_ROWS) {
+            state.busy = false; // We're done!
+            state.done = true;
+            arm_dcache_flush_delete(pixel_buffer, sizeof(pixel_buffer));
+
+            digitalWrite(PIN_LED0, LOW);
+
+            // Reset phases
+            PHASE_V(false, false);
+            PHASE_H(false);
+            PHASE_R(false);
+          }
+        }
+      }
     }
+  } else {
+    if (state.busy) {
+      PHASE_H(false);
+    }
+
+    // Pulse reset
+    PHASE_R(true);
+    delayNanoseconds(150);
+    PHASE_R(false);
   }
-
-  // Clock next pixel
-  PHASE_H(false, true);
-
-  // Reset
-  PHASE_R(true);
-  delayNanoseconds(150 * SLOWDOWN);
-  PHASE_R(false);
-  delayNanoseconds(150 * SLOWDOWN);
-
-  // Next pixel (part 2)
-  PHASE_H(true, false);
-  delayNanoseconds(250 * SLOWDOWN);
-
-  if (state.busy) {
-    // Start next read
-    adc->adc0->startSingleRead(state.readout_pin);
-  }
+  state.rising_edge = !state.rising_edge;
 }
 
 bool start_readout(bool high_gain){
@@ -118,34 +138,30 @@ bool start_readout(bool high_gain){
   // Enable LED
   digitalWrite(PIN_LED0, HIGH);
 
-  // Setup state
-  state.row = 0;
-  state.col = 0;
-  state.busy = true;
-  state.done = false;
-  state.readout_pin = high_gain ? PIN_P1_VOUT1 : PIN_P1_VOUT2;
-
   // Initialize phases
   PHASE_V(false, false);
-  PHASE_H(true, false);
+  PHASE_H(true);
   PHASE_R(false);
 
   // Setup analog path
-  digitalWrite(PIN_DRV_SW_PH_H21, high_gain);
-  digitalWrite(PIN_DRV_SW_PH_H22, !high_gain);
+  digitalWrite(PIN_DRV_SW_PH_H21, !high_gain);
+  digitalWrite(PIN_DRV_SW_PH_H22, high_gain);
 
   // Setup read ADC
-  adc->adc0->enableInterrupts(adc_irq);
   adc->adc0->setAveraging(1);
   adc->adc0->setResolution(10);
   adc->adc0->setConversionSpeed(ADC_CONVERSION_SPEED::HIGH_SPEED);
-  adc->adc0->setSamplingSpeed(ADC_SAMPLING_SPEED::VERY_HIGH_SPEED);
+  adc->adc0->setSamplingSpeed(ADC_SAMPLING_SPEED::HIGH_SPEED);
   adc->adc0->wait_for_cal();
 
-  // Start readout
-  next_row();
-
-  adc->adc0->startSingleRead(state.readout_pin);
+  // Setup state
+  state.row = 0;
+  state.col = 0;
+  state.done = false;
+  state.rising_edge = false;
+  state.ph_v_counter = T_PH_H_TOTAL_US; // Start with a fresh row
+  state.readout_pin = high_gain ? PIN_P1_VOUT2 : PIN_P1_VOUT1;
+  state.busy = true;
 
   return true;
 }
@@ -223,7 +239,8 @@ void setup() {
   // USB handler
   usb_dalsa_set_handler(usb_handler);
 
-  PHASE_H(false, false);
+  // Start pixel timer
+  pixelTimer.begin(pixel_irq, T_HALF_PIXEL_US);
 }
 
 void loop() {

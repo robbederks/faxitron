@@ -14,7 +14,7 @@ class DalsaTeensy:
   CONTROL_IN_ENDPOINT = 6
   BULK_IN_ENDPOINT = 7
 
-  STRUCT_STATE = struct.Struct("<IIB??")
+  STRUCT_STATE = struct.Struct("<IIIB???")
 
   def __init__(self):
     self._handle = None
@@ -67,14 +67,15 @@ class DalsaTeensy:
 
   def get_state(self):
     dat = self._command(0x01, b"")
-    assert len(dat) == self.STRUCT_STATE.size, "Response does not match expected struct size"
+    assert len(dat) == self.STRUCT_STATE.size, f"Response does not match expected struct size: {len(dat)} != {self.STRUCT_STATE.size}"
     dat_unpacked = self.STRUCT_STATE.unpack(dat)
     return {
       'row': dat_unpacked[0],
       'col': dat_unpacked[1],
-      'readout_pin': dat_unpacked[2],
-      'busy': dat_unpacked[3],
-      'done': dat_unpacked[4],
+      'ph_v_counter': dat_unpacked[2],
+      'readout_pin': dat_unpacked[3],
+      'busy': dat_unpacked[4],
+      'done': dat_unpacked[5],
     }
 
   def get_frame(self):
@@ -89,6 +90,7 @@ class DalsaTeensy:
     if dat[0] != 0:
       raise Exception("Failed to start readout, is another readout in progress?")
 
+
 if __name__ == "__main__":
   dalsa_teensy = DalsaTeensy()
   dalsa_teensy.ping()
@@ -98,13 +100,18 @@ if __name__ == "__main__":
   plt.figure()
   while True:
     st = time.monotonic()
-    dalsa_teensy.start_readout(True)
+
+    state = dalsa_teensy.get_state()
+    print(state)
+
+    dalsa_teensy.start_readout(False)
     print("Started readout")
 
     done = False
     while not done:
       time.sleep(0.1)
       state = dalsa_teensy.get_state()
+      print(state)
       done = state['done']
     print(f"Readout done in {time.monotonic() - st:.2f}s")
 
@@ -115,6 +122,7 @@ if __name__ == "__main__":
     frame = frame.reshape((1024 + 8, 1024 + 18))
 
     if img is None:
+      print(np.max(frame), np.min(frame))
       img = plt.imshow(np.max(frame) - frame, cmap='gray')
     else:
       img.set_data(np.max(frame) - frame)
