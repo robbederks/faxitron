@@ -7,3 +7,4 @@ e2i
 .sconsign.*
 sdk/
 __pycache__
+.vscode/
