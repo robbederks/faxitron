@@ -90,10 +90,20 @@ class DalsaTeensy:
     if dat[0] != 0:
       raise Exception("Failed to start readout, is another readout in progress?")
 
+  def get_faxitron_state(self):
+    dat = self._command(0x10, b"")
+    print(dat)
+    # assert len(dat) == 1, "Response does not match expected size"
+    # return dat[0]
+
 
 if __name__ == "__main__":
   dalsa_teensy = DalsaTeensy()
   dalsa_teensy.ping()
+
+  while True:
+    dalsa_teensy.get_faxitron_state()
+    time.sleep(0.5)
 
   # for hg in [False, True]:
   img = None

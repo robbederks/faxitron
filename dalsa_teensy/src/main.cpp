@@ -166,6 +166,13 @@ bool start_readout(bool high_gain){
   return true;
 }
 
+uint32_t faxitron_command(String command, uint8_t *response, uint32_t max_response_len) {
+  command += "\r";
+  Serial2.write(command.c_str(), command.length());
+  Serial2.flush();
+  return (uint32_t) Serial2.readBytesUntil('\r', response, max_response_len);
+}
+
 typedef struct __attribute__((__packed__)) {
   uint8_t command;
   uint32_t data_len;
@@ -204,6 +211,10 @@ uint32_t usb_handler(uint8_t *control_data, uint32_t len, uint8_t *return_data, 
       return_len = 1;
       break;
 
+    case 0x10: // Get Faxitron status
+      return_len = faxitron_command("?S", return_data, 10);
+      break;
+
     default:
       Serial.write("Invalid command %d\n", req->command);
       return_len = 0;
@@ -215,8 +226,11 @@ end:
 }
 
 void setup() {
-  // Setup Serial
+  // Setup USB Serial
   Serial.begin(115200);
+
+  // Setup Faxitron Serial
+  Serial2.begin(9600, SERIAL_8N1);
 
   // LEDs
   pinMode(PIN_LED_TEENSY, OUTPUT);
