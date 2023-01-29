@@ -1,144 +1,48 @@
 #!/usr/bin/env python3
 
 import sys
-import usb1
-import time
-import struct
+import signal
 
-import numpy as np
-import matplotlib.pyplot as plt
+from PySide6.QtCore import Qt
+from PySide6.QtWidgets import QApplication, QFrame, QWidget, QHBoxLayout, QVBoxLayout, QSplitter
 
-class DalsaTeensy:
-  DALSA_INTERFACE = 2
-  CONTROL_OUT_ENDPOINT = 5
-  CONTROL_IN_ENDPOINT = 6
-  BULK_IN_ENDPOINT = 7
+from dalsa_teensy import DalsaTeensy
 
-  STRUCT_STATE = struct.Struct("<IIIB???")
+class App(QWidget):
+  def __init__(self, parent=None):
+    super().__init__(parent)
 
-  def __init__(self):
-    self._handle = None
-    self.connect()
+    splitter = QSplitter()
+    splitter.setOrientation(Qt.Horizontal)
 
-  def connect(self):
-    if self._handle is not None:
-      self._handle.close()
+    left_column = QVBoxLayout()
 
-    self._handle = usb1.USBContext().openByVendorIDAndProductID(0x16c0, 0x0483)
-    assert self._handle is not None, "Could not find Dalsa Teensy. Make sure it's connected."
+    # add left column stuff
 
-    self._handle.claimInterface(DalsaTeensy.DALSA_INTERFACE)
+    left_widget = QWidget()
+    left_widget.setLayout(left_column)
+    splitter.addWidget(left_widget)
 
-    print("Connected to Dalsa Teensy")
+    right_column = QVBoxLayout()
 
-  def _control_out(self, data):
-    return self._handle.bulkWrite(
-      endpoint=DalsaTeensy.CONTROL_OUT_ENDPOINT,
-      data=data,
-    )
+    # add right column stuff
 
-  def _control_in(self, size):
-    return self._handle.bulkRead(
-      endpoint=DalsaTeensy.CONTROL_IN_ENDPOINT,
-      length=size,
-    )
+    right_widget = QWidget()
+    right_widget.setLayout(right_column)
+    splitter.addWidget(right_widget)
 
-  def _bulk_in(self, size):
-    return self._handle.bulkRead(
-      endpoint=DalsaTeensy.BULK_IN_ENDPOINT,
-      length=size,
-    )
-
-  def _command(self, cmd, data):
-    self._control_out(struct.pack("<BI", cmd, len(data)) + data)
-    resp = self._control_in(512)
-    if len(resp) < 4:
-      raise Exception("Invalid response length", len(resp))
-    resp_len = struct.unpack("<I", resp[:4])[0]
-    resp = resp[4:]
-    while len(resp) < resp_len:
-      resp += self._control_in(resp_len - len(resp))
-    return resp
-
-  def ping(self):
-    dat = self._command(0x00, b"")
-    assert len(dat) == 1, "Response does not match expected size"
-    assert dat[0] == 0xA5, "Invalid ping response"
-
-  def get_state(self):
-    dat = self._command(0x01, b"")
-    assert len(dat) == self.STRUCT_STATE.size, f"Response does not match expected struct size: {len(dat)} != {self.STRUCT_STATE.size}"
-    dat_unpacked = self.STRUCT_STATE.unpack(dat)
-    return {
-      'row': dat_unpacked[0],
-      'col': dat_unpacked[1],
-      'ph_v_counter': dat_unpacked[2],
-      'readout_pin': dat_unpacked[3],
-      'busy': dat_unpacked[4],
-      'done': dat_unpacked[5],
-    }
-
-  def get_frame(self):
-    dat = self._command(0x02, b"")
-    assert len(dat) == 4, "Response does not match expected size"
-    frame_len = struct.unpack("<I", dat[:4])[0]
-    return self._bulk_in(frame_len)
-
-  def start_readout(self, high_gain=False):
-    dat = self._command(0x03, b"\x01" if high_gain else b"\x00")
-    assert len(dat) == 1, "Response does not match expected size"
-    if dat[0] != 0:
-      raise Exception("Failed to start readout, is another readout in progress?")
-
-  def get_faxitron_state(self):
-    dat = self._command(0x10, b"")
-    print(dat)
-    # assert len(dat) == 1, "Response does not match expected size"
-    # return dat[0]
-
+    layout = QHBoxLayout()
+    layout.addWidget(splitter)
+    parent.setLayout(layout)
 
 if __name__ == "__main__":
-  dalsa_teensy = DalsaTeensy()
-  dalsa_teensy.ping()
+  # make ctrl-C work
+  signal.signal(signal.SIGINT, signal.SIG_DFL)
 
-  while True:
-    dalsa_teensy.get_faxitron_state()
-    time.sleep(0.5)
-
-  # for hg in [False, True]:
-  img = None
-  plt.figure()
-  while True:
-    st = time.monotonic()
-
-    state = dalsa_teensy.get_state()
-    print(state)
-
-    dalsa_teensy.start_readout(False)
-    print("Started readout")
-
-    done = False
-    while not done:
-      time.sleep(0.1)
-      state = dalsa_teensy.get_state()
-      print(state)
-      done = state['done']
-    print(f"Readout done in {time.monotonic() - st:.2f}s")
-
-    frame = dalsa_teensy.get_frame()
-    assert len(frame) == 2150688, "Frame does not match expected size"
-
-    frame = np.frombuffer(frame, dtype=np.uint16)
-    frame = frame.reshape((1024 + 8, 1024 + 18))
-
-    if img is None:
-      print(np.max(frame), np.min(frame))
-      img = plt.imshow(np.max(frame) - frame, cmap='gray')
-    else:
-      img.set_data(np.max(frame) - frame)
-    plt.draw()
-    plt.pause(5)
-
-    if len(sys.argv) > 1:
-      plt.show()
-      break
+  app = QApplication(sys.argv)
+  frame = QFrame()
+  frame.setWindowTitle("Faxitron Dalsa Teensy")
+  frame.resize(1600, 1200)
+  sp = App(frame)
+  frame.show()
+  app.exec()
