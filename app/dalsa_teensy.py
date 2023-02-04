@@ -11,6 +11,13 @@ class DalsaTeensy:
 
   STRUCT_STATE = struct.Struct("<IIIB???")
 
+  FAXITRON_STATE_WARMING_UP = "warming_up"
+  FAXITRON_STATE_DOOR_OPEN = "door_open"
+  FAXITRON_STATE_READY = "ready"
+
+  FAXITRON_MODE_FRONT_PANEL = "front_panel"
+  FAXITRON_MODE_REMOTE = "remote"
+
   def __init__(self):
     self._handle = None
     self.connect()
@@ -86,12 +93,72 @@ class DalsaTeensy:
       raise Exception("Failed to start readout, is another readout in progress?")
 
   def get_faxitron_state(self):
-    dat = self._command(0x10, b"")
+    dat = self._command(0x10, b"?S").decode()
+    assert len(dat) == 3, "Response does not match expected size"
+    if dat == "?SR":
+      return self.FAXITRON_STATE_READY
+    elif dat == "?SD":
+      return self.FAXITRON_STATE_DOOR_OPEN
+    elif dat == "?SW":
+      return self.FAXITRON_STATE_WARMING_UP
     print(dat)
-    # assert len(dat) == 1, "Response does not match expected size"
-    # return dat[0]
+    return None
 
+  def get_faxitron_exposure_time(self):
+    dat = self._command(0x10, b"?T").decode()
+    assert "?T" in dat, "Response does not match expected format"
+    return int(dat[2:])/10
+
+  def set_faxitron_exposure_time(self, exposure_time):
+    assert 0 < exposure_time <= 99.9, "Exposure time must be between 0 and 99.9s"
+    self._command(0x10, b"!T" + str(int(exposure_time * 10)).rjust(4, "0")[:4].encode())
+
+  def get_faxitron_voltage(self):
+    dat = self._command(0x10, b"?V").decode()
+    assert "?V" in dat, "Response does not match expected format"
+    return int(dat[2:])
+
+  def set_faxitron_voltage(self, voltage):
+    assert 0 < voltage <= 35, "Voltage must be between 0 and 35"
+    self._command(0x10, b"!V" + str(voltage).rjust(2, "0")[:2].encode())
+
+  def get_faxitron_mode(self):
+    dat = self._command(0x10, b"?M").decode()
+    assert len(dat) == 3, "Response does not match expected size"
+    if dat == "?MF":
+      return self.FAXITRON_MODE_FRONT_PANEL
+    elif dat == "?MR":
+      return self.FAXITRON_MODE_REMOTE
+    return None
+
+  def set_faxitron_mode(self, mode):
+    assert mode in [self.FAXITRON_MODE_FRONT_PANEL, self.FAXITRON_MODE_REMOTE], "Invalid mode"
+    modes = {
+      self.FAXITRON_MODE_FRONT_PANEL: b"!MF",
+      self.FAXITRON_MODE_REMOTE: b"!MR",
+    }
+    self._command(0x10, modes[mode])
+
+  def perform_faxitron_exposure(self):
+    dat = self._command(0x10, b"!B")
+    assert dat == b"X", "Response does not match expected format"
+    dat = self._command(0x10, b"C")
+    assert dat == b"P", "Response does not match expected format"
+    while len(dat := self._command(0x10, b"")) == 0:
+      pass
+    assert dat == b"S", "Response does not match expected format"
 
 if __name__ == "__main__":
   dalsa_teensy = DalsaTeensy()
   dalsa_teensy.ping()
+
+  print("Faxitron state:", dalsa_teensy.get_faxitron_state())
+  dalsa_teensy.set_faxitron_exposure_time(30)
+  print("Faxitron exposure time:", dalsa_teensy.get_faxitron_exposure_time())
+  dalsa_teensy.set_faxitron_voltage(20)
+  print("Faxitron voltage:", dalsa_teensy.get_faxitron_voltage())
+  print("Faxitron mode:", dalsa_teensy.get_faxitron_mode())
+  dalsa_teensy.set_faxitron_mode(DalsaTeensy.FAXITRON_MODE_REMOTE)
+  print("Faxitron mode:", dalsa_teensy.get_faxitron_mode())
+
+  # dalsa_teensy.perform_faxitron_exposure()
