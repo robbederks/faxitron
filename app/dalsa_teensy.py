@@ -2,6 +2,7 @@
 
 import usb1
 import struct
+from threading import Lock
 
 class DalsaTeensy:
   DALSA_INTERFACE = 2
@@ -20,6 +21,7 @@ class DalsaTeensy:
 
   def __init__(self):
     self._handle = None
+    self._serial_lock = Lock()
     self.connect()
 
   def connect(self):
@@ -62,6 +64,13 @@ class DalsaTeensy:
       resp += self._control_in(resp_len - len(resp))
     return resp
 
+  def _faxitron_serial_command(self, data, no_lock=False):
+    if no_lock:
+      return self._command(0x10, data)
+    else:
+      with self._serial_lock:
+        return self._command(0x10, data)
+
   def ping(self):
     dat = self._command(0x00, b"")
     assert len(dat) == 1, "Response does not match expected size"
@@ -93,7 +102,7 @@ class DalsaTeensy:
       raise Exception("Failed to start readout, is another readout in progress?")
 
   def get_faxitron_state(self):
-    dat = self._command(0x10, b"?S").decode()
+    dat = self._faxitron_serial_command(b"?S").decode()
     assert len(dat) == 3, "Response does not match expected size"
     if dat == "?SR":
       return self.FAXITRON_STATE_READY
@@ -105,25 +114,25 @@ class DalsaTeensy:
     return None
 
   def get_faxitron_exposure_time(self):
-    dat = self._command(0x10, b"?T").decode()
+    dat = self._faxitron_serial_command(b"?T").decode()
     assert "?T" in dat, "Response does not match expected format"
     return int(dat[2:])/10
 
   def set_faxitron_exposure_time(self, exposure_time):
     assert 0 < exposure_time <= 99.9, "Exposure time must be between 0 and 99.9s"
-    self._command(0x10, b"!T" + str(int(exposure_time * 10)).rjust(4, "0")[:4].encode())
+    self._faxitron_serial_command(b"!T" + str(int(exposure_time * 10)).rjust(4, "0")[:4].encode())
 
   def get_faxitron_voltage(self):
-    dat = self._command(0x10, b"?V").decode()
+    dat = self._faxitron_serial_command(b"?V").decode()
     assert "?V" in dat, "Response does not match expected format"
     return int(dat[2:])
 
   def set_faxitron_voltage(self, voltage):
     assert 0 < voltage <= 35, "Voltage must be between 0 and 35"
-    self._command(0x10, b"!V" + str(voltage).rjust(2, "0")[:2].encode())
+    self._faxitron_serial_command(b"!V" + str(voltage).rjust(2, "0")[:2].encode())
 
   def get_faxitron_mode(self):
-    dat = self._command(0x10, b"?M").decode()
+    dat = self._faxitron_serial_command(b"?M").decode()
     assert len(dat) == 3, "Response does not match expected size"
     if dat == "?MF":
       return self.FAXITRON_MODE_FRONT_PANEL
@@ -137,16 +146,17 @@ class DalsaTeensy:
       self.FAXITRON_MODE_FRONT_PANEL: b"!MF",
       self.FAXITRON_MODE_REMOTE: b"!MR",
     }
-    self._command(0x10, modes[mode])
+    self._faxitron_serial_command(modes[mode])
 
   def perform_faxitron_exposure(self):
-    dat = self._command(0x10, b"!B")
-    assert dat == b"X", "Response does not match expected format"
-    dat = self._command(0x10, b"C")
-    assert dat == b"P", "Response does not match expected format"
-    while len(dat := self._command(0x10, b"")) == 0:
-      pass
-    assert dat == b"S", "Response does not match expected format"
+    with self._serial_lock:
+      dat = self._faxitron_serial_command(b"!B", no_lock=True)
+      assert dat == b"X", "Response does not match expected format"
+      dat = self._faxitron_serial_command(b"C", no_lock=True)
+      assert dat == b"P", "Response does not match expected format"
+      while len(dat := self._faxitron_serial_command(b"", no_lock=True)) == 0:
+        pass
+      assert dat == b"S", "Response does not match expected format"
 
 if __name__ == "__main__":
   dalsa_teensy = DalsaTeensy()
