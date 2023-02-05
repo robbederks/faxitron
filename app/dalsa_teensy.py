@@ -19,6 +19,9 @@ class DalsaTeensy:
   FAXITRON_MODE_FRONT_PANEL = "front_panel"
   FAXITRON_MODE_REMOTE = "remote"
 
+  FRAME_WIDTH = 1024 + 8
+  FRAME_HEIGHT = 1024 + 18
+
   def __init__(self):
     self._handle = None
     self._serial_lock = Lock()

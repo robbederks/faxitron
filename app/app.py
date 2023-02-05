@@ -1,15 +1,19 @@
 #!/usr/bin/env python3
 
+import cv2
 import sys
 import time
 import signal
+import numpy as np
 
 from PySide6.QtCore import Qt, Signal, Slot, QTimer, QThread
 from PySide6.QtWidgets import QApplication, QFrame, QWidget, QHBoxLayout, QVBoxLayout, QSplitter, QLabel, QLineEdit, QGroupBox, QPushButton
+from PySide6.QtGui import QImage, QPixmap
 
 from dalsa_teensy import DalsaTeensy
 
 dalsa_teensy = None
+raw_frame = np.zeros((DalsaTeensy.FRAME_WIDTH, DalsaTeensy.FRAME_HEIGHT), dtype=np.uint16)
 
 class Setting(QHBoxLayout):
   value_changed = Signal(str)
@@ -109,7 +113,59 @@ class FaxitronGroupBox(QGroupBox):
     self.timer.start(250)
 
 
+class DalsaGroupBox(QGroupBox):
+  new_frame = Signal()
+
+  class ReadoutThread(QThread):
+    done = Signal()
+    progress = Signal(int)
+
+    def __init__(self, parent=None):
+      super().__init__(parent)
+
+    def run(self):
+      global raw_frame
+
+      dalsa_teensy.start_readout()
+      state = dalsa_teensy.get_state()
+      while not state['done']:
+        state = dalsa_teensy.get_state()
+        self.progress.emit(int(state['row'] / 1032 * 100))
+        time.sleep(0.1)
+      frame = dalsa_teensy.get_frame()
+      assert len(frame) == 2150688, "Frame is not of the expected size"
+      raw_frame = np.frombuffer(frame, dtype=np.uint16).reshape((DalsaTeensy.FRAME_WIDTH, DalsaTeensy.FRAME_HEIGHT))
+
+      self.done.emit()
+
+  def readout(self):
+    def readout_done():
+      self.readout_button.setEnabled(True)
+      self.readout_button.setText("Read out")
+      self.new_frame.emit()
+
+    self.readout_button.setEnabled(False)
+    self.readout_thread = self.ReadoutThread()
+    self.readout_thread.done.connect(readout_done)
+    self.readout_thread.progress.connect(lambda p: self.readout_button.setText(f"Reading out... ({p}%)"))
+    self.readout_thread.start()
+
+  def __init__(self, parent=None):
+    super().__init__("Dalsa", parent)
+
+    layout = QVBoxLayout()
+
+    self.readout_button = QPushButton("Read out")
+    self.readout_button.clicked.connect(self.readout)
+    layout.addWidget(self.readout_button)
+
+    self.setLayout(layout)
+
 class App(QWidget):
+  def new_frame(self):
+    normalized_img = cv2.normalize(-1 * raw_frame, None, 0, 2**16, cv2.NORM_MINMAX, dtype=cv2.CV_16U)
+    self.image_label.setPixmap(QPixmap.fromImage(QImage(bytes(normalized_img), DalsaTeensy.FRAME_HEIGHT, DalsaTeensy.FRAME_WIDTH, QImage.Format_Grayscale16)))
+
   def __init__(self, parent=None):
     super().__init__(parent)
 
@@ -119,6 +175,9 @@ class App(QWidget):
     left_column = QVBoxLayout()
 
     # add left column stuff
+    self.image_label = QLabel()
+    self.new_frame()
+    left_column.addWidget(self.image_label)
 
     left_widget = QWidget()
     left_widget.setLayout(left_column)
@@ -128,6 +187,10 @@ class App(QWidget):
 
     self.faxitron_group_box = FaxitronGroupBox()
     right_column.addWidget(self.faxitron_group_box)
+
+    self.dalsa_group_box = DalsaGroupBox()
+    self.dalsa_group_box.new_frame.connect(self.new_frame)
+    right_column.addWidget(self.dalsa_group_box)
 
     right_column.addStretch()
 
