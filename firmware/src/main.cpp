@@ -33,7 +33,7 @@
 #define SENSOR_COLUMNS (SENSOR_JUNK_COLS_PRE + SENSOR_DARK_COLS_PRE + SENSOR_RESOLUTION + SENSOR_DARK_COLS_POST + SENSOR_JUNK_COLS_POST)
 
 // Macros
-#define PHASE_V(state1, state2) {digitalWrite(PIN_DRV_PH_V1, state1); digitalWrite(PIN_DRV_PH_V2, state2);}
+#define PHASE_V(state1, state2) {digitalWrite(PIN_DRV_PH_V2, state2); digitalWrite(PIN_DRV_PH_V1, state1);}
 #define PHASE_H(state) {digitalWrite(PIN_DRV_PH_H1, state); digitalWrite(PIN_DRV_PH_H2, !state);}
 #define PHASE_R(state) {digitalWrite(PIN_DRV_PH_R, state);}
 
@@ -124,7 +124,7 @@ void pixel_irq(){
 
     // Pulse reset
     PHASE_R(true);
-    delayNanoseconds(150);
+    delayNanoseconds(350);
     PHASE_R(false);
   }
   state.rising_edge = !state.rising_edge;

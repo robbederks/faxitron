@@ -165,13 +165,15 @@ if __name__ == "__main__":
   dalsa_teensy = DalsaTeensy()
   dalsa_teensy.ping()
 
-  print("Faxitron state:", dalsa_teensy.get_faxitron_state())
-  dalsa_teensy.set_faxitron_exposure_time(30)
-  print("Faxitron exposure time:", dalsa_teensy.get_faxitron_exposure_time())
-  dalsa_teensy.set_faxitron_voltage(20)
-  print("Faxitron voltage:", dalsa_teensy.get_faxitron_voltage())
-  print("Faxitron mode:", dalsa_teensy.get_faxitron_mode())
-  dalsa_teensy.set_faxitron_mode(DalsaTeensy.FAXITRON_MODE_REMOTE)
-  print("Faxitron mode:", dalsa_teensy.get_faxitron_mode())
+  # print("Faxitron state:", dalsa_teensy.get_faxitron_state())
+  # dalsa_teensy.set_faxitron_exposure_time(30)
+  # print("Faxitron exposure time:", dalsa_teensy.get_faxitron_exposure_time())
+  # dalsa_teensy.set_faxitron_voltage(20)
+  # print("Faxitron voltage:", dalsa_teensy.get_faxitron_voltage())
+  # print("Faxitron mode:", dalsa_teensy.get_faxitron_mode())
+  # dalsa_teensy.set_faxitron_mode(DalsaTeensy.FAXITRON_MODE_REMOTE)
+  # print("Faxitron mode:", dalsa_teensy.get_faxitron_mode())
 
-  # dalsa_teensy.perform_faxitron_exposure()
+  while 1:
+    if dalsa_teensy.get_state()['busy'] == False:
+      dalsa_teensy.start_readout(True)

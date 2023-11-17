@@ -126,7 +126,7 @@ class DalsaGroupBox(QGroupBox):
     def run(self):
       global raw_frame
 
-      dalsa_teensy.start_readout()
+      dalsa_teensy.start_readout(True)
       state = dalsa_teensy.get_state()
       while not state['done']:
         state = dalsa_teensy.get_state()
